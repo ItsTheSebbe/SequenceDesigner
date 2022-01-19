@@ -9,20 +9,19 @@ def ParseJson():
     Parse cadnano json file
     """
 
-    # inputFile = "testsmall.json"
     inputFile = sys.argv[1]
     # outputFile = sys.argv[2]
 
     with open(inputFile, 'r') as json_data:
         cadnano_data = json.load(json_data)
 
-    filename = cadnano_data['name']
-    # print("Importing " + filename + "...")
+    # filename = cadnano_data['name']
 
     strand_data = cadnano_data['vstrands']
     num_strands = len(strand_data)
     length_strands = len(strand_data[0]['scaf'])
 
+    # Initialize arrays
     scaffold = np.empty(num_strands, dtype=object)
     staples = np.empty(num_strands, dtype=object)
     row = np.empty(num_strands, dtype=object)
@@ -41,7 +40,8 @@ def ParseJson():
 
 def FindStart(scaffold, length_strands):
     """
-    Looks for start base and returns if found
+    Looks for a start base and returns if found.
+    If not found, returns [-1, -1]
     """
 
     currentBase = [0, 0]  # Start searching at strand 0, base 0
@@ -50,6 +50,7 @@ def FindStart(scaffold, length_strands):
     # Go through first empty bases until nonempty base is found
     while currentBlock == [-1, -1, -1, -1]:
 
+        # Shift one base to the right
         nextBase = [currentBase[0], currentBase[1]+1]
         nextBlock = scaffold[nextBase[0]][nextBase[1]]
 
@@ -62,6 +63,7 @@ def FindStart(scaffold, length_strands):
         currentBlock = nextBlock
 
     firstNonEmpty = currentBase
+
     # From first nonempty base, traverse until end is reached
     while currentBase != [-1, -1]:
         nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
@@ -69,11 +71,11 @@ def FindStart(scaffold, length_strands):
         # Break if end base is found
         if nextBase == [-1, -1]:
             break
-        
+
         # If a loop is reached, there is no breakpoint
         if nextBase == firstNonEmpty:
             print("Scaffold does not have breakpoint")
-            return [-1,-1]
+            return [-1, -1]
 
         currentBlock = nextBlock
         currentBase = nextBase
@@ -103,25 +105,30 @@ def TraverseScaffold(scaffold, startBase):
 
 def TraversePrintScaffold(scaffold, startBase):
     """
-    Traverse and print scaffold
+    Traverse and print scaffold, returns end base
     """
+
     if startBase == [-1, -1]:
         print("Invalid start base")
         return
 
     currentBase = startBase
     currentBlock = scaffold[currentBase[0]][currentBase[1]]
-    nextBase = [currentBlock[2], currentBlock[3]]
+    nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+
+    print("Printing scaffold...")
+    print(currentBlock)
 
     # Traverse scaffold until nextBase is [-1,-1]
-    print("Printing scaffold...")
     while nextBase != [-1, -1]:
-        print(currentBlock)
-        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
         currentBlock = nextBlock
         currentBase = nextBase
+        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+        print(currentBlock)
+
+    return currentBase
 
 
 num_strands, length_strands, scaffold, staples, row, col, num, strand_data = ParseJson()
 startBase = FindStart(scaffold, length_strands)
-TraversePrintScaffold(scaffold, startBase)
+endBase = TraversePrintScaffold(scaffold, startBase)
