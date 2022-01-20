@@ -46,10 +46,10 @@ def ParseJson():
     return num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq
 
 
-def FindStart(scaffold, length_strands):
+def ScaffoldStartSearch(scaffold, length_strands):
     """
     Looks for a start base and returns if found.
-    If not found, returns [-1, -1]
+    If not found, exits program
     """
 
     currentBase = [0, 0]  # Start searching at strand 0, base 0
@@ -74,7 +74,7 @@ def FindStart(scaffold, length_strands):
 
     # From first nonempty base, traverse until end is reached
     while currentBase != [-1, -1]:
-        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+        nextBase, nextBlock = Traverse(scaffold, currentBase)
 
         # Break if end base is found
         if nextBase == [-1, -1]:
@@ -98,36 +98,27 @@ def FindStart(scaffold, length_strands):
 
     return startBase
 
+def ValidateScaffoldSeq(strand, startBase, scaffold_seq):
+    print('validation')
 
-def TraverseScaffold(scaffold, startBase):
-    """
-    Traverse scaffold by a single base
-    """
-    currentBase = startBase
-    currentBlock = scaffold[currentBase[0]][currentBase[1]]
-    nextBase = [currentBlock[2], currentBlock[3]]
-    nextBlock = scaffold[nextBase[0]][nextBase[1]]
-    return nextBase, nextBlock
-
-
-def TraverseEntireScaffold(scaffold, startBase, scaffold_seq):
+def FindScaffoldSeq(strand, startBase, scaffold_seq):
     """
     Traverse and print scaffold, returns end base
     """
 
-    if startBase == [-1, -1]:
-        print("Invalid start base")
-        return
+    # if startBase == [-1, -1]:
+    #     print("Invalid start base")
+    #     return
 
     finalSequence = []
     currentBase = startBase
-    currentBlock = scaffold[currentBase[0]][currentBase[1]]
+    currentBlock = strand[currentBase[0]][currentBase[1]]
     currentBlock.append(scaffold_seq[0])
     cnt = 1
 
     finalSequence.append(currentBlock)
 
-    nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+    nextBase, nextBlock = Traverse(strand, currentBase)
 
     # Traverse scaffold until nextBase is [-1,-1]
     while nextBase != [-1, -1]:
@@ -138,7 +129,7 @@ def TraverseEntireScaffold(scaffold, startBase, scaffold_seq):
         finalSequence.append(currentBlock)
         cnt += 1
 
-        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+        nextBase, nextBlock = Traverse(strand, currentBase)
 
     endBase = currentBase
 
@@ -154,16 +145,122 @@ def TraverseEntireScaffold(scaffold, startBase, scaffold_seq):
     return endBase, finalSequence
 
 
-def PrintScaffold(finalSequence):
+def Traverse(strand, startBase):
+    """
+    Traverse strand by a single base
+    """
+
+    currentBase = startBase
+    currentBlock = strand[currentBase[0]][currentBase[1]]
+    nextBase = [currentBlock[2], currentBlock[3]]
+    nextBlock = strand[nextBase[0]][nextBase[1]]
+    return nextBase, nextBlock
+
+
+def ReverseTraverse(strand, startBase):
+    """
+    Traverse strand by a single base in reverse
+    """
+
+    currentBase = startBase
+    currentBlock = strand[currentBase[0]][currentBase[1]]
+    prevBase = [currentBlock[0], currentBlock[1]]
+    prevBlock = strand[prevBase[0]][prevBase[1]]
+    return prevBase, prevBlock
+
+
+def TraverseEntire(strand, startSearchBase):
+    """
+    Traverse strand, returns start base
+    """
+
+    currentBase = startSearchBase
+    currentBlock = strand[currentBase[0]][currentBase[1]]
+
+    # If current base is empty, return empty base
+    if currentBlock == [-1, -1, -1, -1]:
+        return [-1, -1]
+
+    nextBase, nextBlock = Traverse(strand, currentBase)
+
+    # Traverse scaffold until prevBase is [-1,-1]
+    while nextBase != [-1, -1]:
+        currentBlock = nextBlock
+        currentBase = nextBase
+
+        nextBase, nextBlock = Traverse(strand, currentBase)
+
+    endBase = currentBase
+
+    return endBase
+
+
+def TraverseEntireReverse(strand, startSearchBase):
+    """
+    Traverse strand in reverse, returns start base
+    """
+
+    currentBase = startSearchBase
+    currentBlock = strand[currentBase[0]][currentBase[1]]
+
+    # If current base is empty, return empty base
+    if currentBlock == [-1, -1, -1, -1]:
+        return [-1, -1]
+
+    prevBase, prevBlock = ReverseTraverse(strand, currentBase)
+
+    # Traverse scaffold until prevBase is [-1,-1]
+    while prevBase != [-1, -1]:
+        currentBlock = prevBlock
+        currentBase = prevBase
+
+        prevBase, prevBlock = ReverseTraverse(strand, currentBase)
+
+    startBase = currentBase
+
+    return startBase
+
+
+def PrintStrand(finalSequence):
+    """
+    Prints strand
+    """
+
     for seq in finalSequence:
         print(seq)
 
 
-num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq = ParseJson()
-startBase = FindStart(scaffold, length_strands)
-endBase, finalSequence = TraverseEntireScaffold(
-    scaffold, startBase, scaffold_seq)
-PrintScaffold(finalSequence)
+def StapleStartSearch(staples, num_strands, length_strands):
+    """
+    Returns all startbases of staple strands
+    """
+    stapleStartBases = []
+    # Check all strands
+    for i in range(num_strands):
+        # Check all bases in each strand
+        for j in range(length_strands):
 
-print(startBase)
-print(endBase)
+            startSearchBase = [i, j]
+            startBase = TraverseEntireReverse(staples, startSearchBase)
+
+            if startBase != [-1, -1]:
+                stapleStartBases.append(startBase)
+
+    # Extracts only unique start bases
+    stapleStartBases = [list(x) for x in set(tuple(x) for x in stapleStartBases)]
+
+    return stapleStartBases
+
+
+num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq = ParseJson()
+
+# staples
+stapleStartBases = StapleStartSearch(staples, num_strands, length_strands)
+# scaffold
+scaffoldStartBase = ScaffoldStartSearch(scaffold, length_strands)
+
+endBase, finalSequence = FindScaffoldSeq(
+    scaffold, scaffoldStartBase, scaffold_seq)
+
+#  PrintStrand(finalSequence)
+
