@@ -144,12 +144,12 @@ def TraverseEntireScaffold(scaffold, startBase, scaffold_seq):
 
     # check if end and start base are next to each other!
     if startBase[0] != endBase[0]:
-        sys.exit("Start and end of scaffold do not connect!")
+        sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
     else:
         if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!")
+            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
         elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!")
+            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
 
     return endBase, finalSequence
 
