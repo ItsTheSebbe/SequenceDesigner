@@ -1,4 +1,3 @@
-from ast import For, If
 import json
 import sys
 import numpy as np
@@ -9,10 +8,19 @@ def ParseJson():
     Parse cadnano json file
     """
 
-    inputFile = sys.argv[1]
+    if len(sys.argv) < 3:
+        sys.exit(
+            "No file provided. Please use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+    else:
+        inputJson = sys.argv[1]
+        inputScaffold = sys.argv[2]
+
+    with open(inputScaffold, 'r') as file:
+        scaffold_seq = file.read().replace('\n', '')
+
     # outputFile = sys.argv[2]
 
-    with open(inputFile, 'r') as json_data:
+    with open(inputJson, 'r') as json_data:
         cadnano_data = json.load(json_data)
 
     # filename = cadnano_data['name']
@@ -35,7 +43,7 @@ def ParseJson():
         col[i] = strand_data[i]['col']
         num[i] = strand_data[i]['num']
 
-    return num_strands, length_strands, scaffold, staples, row, col, num, strand_data
+    return num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq
 
 
 def FindStart(scaffold, length_strands):
@@ -103,10 +111,11 @@ def TraverseScaffold(scaffold, startBase):
     return nextBase, nextBlock
 
 
-def TraversePrintScaffold(scaffold, startBase):
+def TraversePrintScaffold(scaffold, startBase, scaffold_seq):
     """
     Traverse and print scaffold, returns end base
     """
+    cnt = 0
 
     if startBase == [-1, -1]:
         print("Invalid start base")
@@ -114,21 +123,26 @@ def TraversePrintScaffold(scaffold, startBase):
 
     currentBase = startBase
     currentBlock = scaffold[currentBase[0]][currentBase[1]]
-    nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+    currentBlock.append(scaffold_seq[cnt])  
+    cnt += 1
 
     print("Printing scaffold...")
     print(currentBlock)
+    nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
 
     # Traverse scaffold until nextBase is [-1,-1]
     while nextBase != [-1, -1]:
         currentBlock = nextBlock
         currentBase = nextBase
-        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
+        currentBlock.append(scaffold_seq[cnt])  
+        cnt += 1
         print(currentBlock)
+
+        nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
 
     return currentBase
 
 
-num_strands, length_strands, scaffold, staples, row, col, num, strand_data = ParseJson()
+num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq = ParseJson()
 startBase = FindStart(scaffold, length_strands)
-endBase = TraversePrintScaffold(scaffold, startBase)
+endBase = TraversePrintScaffold(scaffold, startBase, scaffold_seq)
