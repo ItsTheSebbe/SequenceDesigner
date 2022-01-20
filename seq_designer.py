@@ -96,19 +96,29 @@ def ScaffoldStartSearch(scaffold, length_strands):
     else:
         startBase = [endBase[0], endBase[1]-1]
 
+    ValidateScaffold(scaffold, startBase)
+
     return startBase
 
-def ValidateScaffoldSeq(strand, startBase, scaffold_seq):
-    print('validation')
+def ValidateScaffold(scaffold, startBase):
+    
+    endBase = TraverseEntire(scaffold, startBase)
 
+    # check if end and start base are next to each other!
+    if startBase[0] != endBase[0]:
+        sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+    else:
+        if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
+            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+        elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
+            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+
+
+### deprecated
 def FindScaffoldSeq(strand, startBase, scaffold_seq):
     """
     Traverse and print scaffold, returns end base
     """
-
-    # if startBase == [-1, -1]:
-    #     print("Invalid start base")
-    #     return
 
     finalSequence = []
     currentBase = startBase
@@ -132,15 +142,6 @@ def FindScaffoldSeq(strand, startBase, scaffold_seq):
         nextBase, nextBlock = Traverse(strand, currentBase)
 
     endBase = currentBase
-
-    # check if end and start base are next to each other!
-    if startBase[0] != endBase[0]:
-        sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
-    else:
-        if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
-        elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
 
     return endBase, finalSequence
 
@@ -259,8 +260,11 @@ stapleStartBases = StapleStartSearch(staples, num_strands, length_strands)
 # scaffold
 scaffoldStartBase = ScaffoldStartSearch(scaffold, length_strands)
 
-endBase, finalSequence = FindScaffoldSeq(
-    scaffold, scaffoldStartBase, scaffold_seq)
+print(stapleStartBases)
+print(scaffoldStartBase)
+
+# endBase, finalSequence = FindScaffoldSeq(
+#     scaffold, scaffoldStartBase, scaffold_seq)
 
 #  PrintStrand(finalSequence)
 
