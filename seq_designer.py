@@ -82,8 +82,7 @@ def FindStart(scaffold, length_strands):
 
         # If a loop is reached, there is no breakpoint
         if nextBase == firstNonEmpty:
-            print("Scaffold does not have breakpoint")
-            return [-1, -1]
+            sys.exit("Scaffold does not have breakpoint")
 
         currentBlock = nextBlock
         currentBase = nextBase
@@ -111,38 +110,59 @@ def TraverseScaffold(scaffold, startBase):
     return nextBase, nextBlock
 
 
-def TraversePrintScaffold(scaffold, startBase, scaffold_seq):
+def TraverseEntireScaffold(scaffold, startBase, scaffold_seq):
     """
     Traverse and print scaffold, returns end base
     """
-    cnt = 0
 
     if startBase == [-1, -1]:
         print("Invalid start base")
         return
 
+    finalSequence = []
     currentBase = startBase
     currentBlock = scaffold[currentBase[0]][currentBase[1]]
-    currentBlock.append(scaffold_seq[cnt])  
-    cnt += 1
+    currentBlock.append(scaffold_seq[0])
+    cnt = 1
 
-    print("Printing scaffold...")
-    print(currentBlock)
+    finalSequence.append(currentBlock)
+
     nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
 
     # Traverse scaffold until nextBase is [-1,-1]
     while nextBase != [-1, -1]:
         currentBlock = nextBlock
         currentBase = nextBase
-        currentBlock.append(scaffold_seq[cnt])  
+        currentBlock.append(scaffold_seq[cnt])
+
+        finalSequence.append(currentBlock)
         cnt += 1
-        print(currentBlock)
 
         nextBase, nextBlock = TraverseScaffold(scaffold, currentBase)
 
-    return currentBase
+    endBase = currentBase
+
+    # check if end and start base are next to each other!
+    if startBase[0] != endBase[0]:
+        sys.exit("Start and end of scaffold do not connect!")
+    else:
+        if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
+            sys.exit("Start and end of scaffold do not connect!")
+        elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
+            sys.exit("Start and end of scaffold do not connect!")
+
+    return endBase, finalSequence
+
+
+def PrintScaffold(finalSequence):
+    for seq in finalSequence:
+        print(seq)
 
 
 num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq = ParseJson()
 startBase = FindStart(scaffold, length_strands)
-endBase = TraversePrintScaffold(scaffold, startBase, scaffold_seq)
+endBase, finalSequence = TraverseEntireScaffold(
+    scaffold, startBase, scaffold_seq)
+PrintScaffold(finalSequence)
+print(startBase)
+print(endBase)  
