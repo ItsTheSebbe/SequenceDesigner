@@ -46,7 +46,7 @@ def ParseJson():
     return num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq
 
 
-def ScaffoldStartSearch(scaffold, length_strands):
+def ScaffoldStartSearch(scaffold, num_strands, length_strands):
     """
     Looks for a start base and returns if found.
     If not found, exits program
@@ -61,6 +61,10 @@ def ScaffoldStartSearch(scaffold, length_strands):
         # Shift one base to the right
         nextBase = [currentBase[0], currentBase[1]+1]
         nextBlock = scaffold[nextBase[0]][nextBase[1]]
+
+        # If no scaffold found
+        if(nextBase[1] == length_strands-1 and nextBase[0] == num_strands - 1):
+            sys.exit("Scaffold does not exist")
 
         # If entire strand is empty, start searching next strand at base 0
         if(nextBase[1] == length_strands-1):
@@ -100,8 +104,9 @@ def ScaffoldStartSearch(scaffold, length_strands):
 
     return startBase
 
+
 def ValidateScaffold(scaffold, startBase):
-    
+
     endBase = TraverseEntire(scaffold, startBase)
 
     # check if end and start base are next to each other!
@@ -114,7 +119,7 @@ def ValidateScaffold(scaffold, startBase):
             sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
 
 
-### deprecated
+# deprecated
 def FindScaffoldSeq(strand, startBase, scaffold_seq):
     """
     Traverse and print scaffold, returns end base
@@ -248,7 +253,8 @@ def StapleStartSearch(staples, num_strands, length_strands):
                 stapleStartBases.append(startBase)
 
     # Extracts only unique start bases
-    stapleStartBases = [list(x) for x in set(tuple(x) for x in stapleStartBases)]
+    stapleStartBases = [list(x) for x in set(tuple(x)
+                                             for x in stapleStartBases)]
 
     return stapleStartBases
 
@@ -258,7 +264,7 @@ num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaf
 # staples
 stapleStartBases = StapleStartSearch(staples, num_strands, length_strands)
 # scaffold
-scaffoldStartBase = ScaffoldStartSearch(scaffold, length_strands)
+scaffoldStartBase = ScaffoldStartSearch(scaffold, num_strands, length_strands)
 
 print(stapleStartBases)
 print(scaffoldStartBase)
@@ -267,4 +273,3 @@ print(scaffoldStartBase)
 #     scaffold, scaffoldStartBase, scaffold_seq)
 
 #  PrintStrand(finalSequence)
-
