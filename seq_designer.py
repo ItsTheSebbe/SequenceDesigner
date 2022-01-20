@@ -66,8 +66,8 @@ def StapleSearch(staples, num_strands, length_strands):
     stapleStartBases = [list(x) for x in set(tuple(x)
                                              for x in stapleStartBases)]
 
-    stapleEndBases = [None]*len(stapleStartBases)
-
+    # Find corresponding end bases
+    stapleEndBases = [None]*len(stapleStartBases)    
     for i in range(len(stapleStartBases)):
         stapleEndBases[i] = TraverseEntire(staples, stapleStartBases[i])
 
@@ -128,18 +128,19 @@ def ScaffoldSearch(scaffold, num_strands, length_strands):
     else:
         scaffoldStartBase = [endBase[0], endBase[1]-1]
 
-    ValidateScaffold(scaffold, scaffoldStartBase)
-
+    # Find corresponding end base
     scaffoldEndBase = TraverseEntire(scaffold, scaffoldStartBase)
+
+    # Check if start and end align
+    ValidateScaffold(scaffoldStartBase, scaffoldEndBase)
 
     return scaffoldStartBase, scaffoldEndBase
 
 
-def ValidateScaffold(scaffold, startBase):
+def ValidateScaffold(startBase, endBase):
     """
     Check if start and end base connect correctly
     """
-    endBase = TraverseEntire(scaffold, startBase)
 
     # check if end and start base are next to each other!
     if startBase[0] != endBase[0]:
