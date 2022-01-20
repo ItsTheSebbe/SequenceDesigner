@@ -164,5 +164,6 @@ startBase = FindStart(scaffold, length_strands)
 endBase, finalSequence = TraverseEntireScaffold(
     scaffold, startBase, scaffold_seq)
 PrintScaffold(finalSequence)
+
 print(startBase)
-print(endBase)  
+print(endBase)
