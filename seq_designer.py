@@ -378,7 +378,7 @@ def main():
     """
     Main program loop
     """
-    
+
     # load data
     num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
 
