@@ -67,7 +67,7 @@ def StapleSearch(staples, num_strands, length_strands):
                                              for x in stapleStartBases)]
 
     # Find corresponding end bases
-    stapleEndBases = [None]*len(stapleStartBases)    
+    stapleEndBases = [None]*len(stapleStartBases)
     for i in range(len(stapleStartBases)):
         stapleEndBases[i] = TraverseEntire(staples, stapleStartBases[i])
 
@@ -178,7 +178,7 @@ def ReverseTraverse(strand, startBase):
 
 def TraverseEntire(strand, startSearchBase):
     """
-    Traverse strand, returns start base
+    Traverse strand, returns end base
     """
 
     currentBase = startSearchBase
@@ -228,61 +228,178 @@ def TraverseEntireReverse(strand, startSearchBase):
     return startBase
 
 
-def PrintStrand(finalSequence):
+def PrintScaffold(sequence, view=0):
     """
-    Prints sequence
+    Prints scaffold, 0 = detailed view, 1 = cadnano view
     """
+    print("Scaffold: ")
 
-    for seq in finalSequence:
-        print(seq)
+    if view == 0:
+        for seq in sequence:
+            print(seq)
+    elif view == 1:
+        print("Start,End,Sequence,Length")
+        print(str(sequence[0][0]) + "[" + str(sequence[0][1]) + "]," +
+              str(sequence[-1][0]) + "[" + str(sequence[-1][1]) + "],", end='')
+        cnt = 0
+        for j in range(len(sequence)):
+            print(str(sequence[j][2]), end='')
+            cnt += 1
+        print("," + str(cnt))
+
+    print("")
 
 
-# deprecated for now
-def FindScaffoldSeq(strand, startBase, scaffold_seq):
+def PrintStaples(sequence, view=0):
     """
-    Traverse and print scaffold, returns end base
+    Prints staples, 0 = detailed view, 1 = cadnano view
+    """
+    print("Staples:")
+
+    if view == 0:
+        for i in range(len(sequence)):
+            print("Staple " + str(i) + ":")
+            for seq in sequence[i]:
+                print(seq)
+            print("")
+
+    elif view == 1:
+        print("Start,End,Sequence,Length")
+        for i in range(len(sequence)):
+            currentSequence = sequence[i]
+            print(str(currentSequence[0][0]) + "[" + str(currentSequence[0][1]) + "]," +
+                  str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],", end='')
+            cnt = 0
+            for j in range(len(currentSequence)):
+                print(str(currentSequence[j][2]), end='')
+                cnt += 1
+            print("," + str(cnt))
+
+    print("")
+
+
+def FindScaffoldSequence(scaffold, startBase, rawScaffoldSequence):
+    """
+    Finds and returns scaffold sequence
     """
 
     finalSequence = []
+
     currentBase = startBase
-    currentBlock = strand[currentBase[0]][currentBase[1]]
-    currentBlock.append(scaffold_seq[0])
+    currentBlock = scaffold[currentBase[0]][currentBase[1]]
+
+    currentBase.append(rawScaffoldSequence[0])
+    finalSequence.append(currentBase)
+
+    nextBase, nextBlock = Traverse(scaffold, currentBase)
     cnt = 1
-
-    finalSequence.append(currentBlock)
-
-    nextBase, nextBlock = Traverse(strand, currentBase)
 
     # Traverse scaffold until nextBase is [-1,-1]
     while nextBase != [-1, -1]:
-        currentBlock = nextBlock
-        currentBase = nextBase
-        currentBlock.append(scaffold_seq[cnt])
 
-        finalSequence.append(currentBlock)
+        currentBase = nextBase
+        currentBlock = nextBlock
+
+        currentBase.append(rawScaffoldSequence[cnt])
+        finalSequence.append(currentBase)
+
+        nextBase, nextBlock = Traverse(scaffold, currentBase)
         cnt += 1
 
-        nextBase, nextBlock = Traverse(strand, currentBase)
-
-    endBase = currentBase
-
-    return endBase, finalSequence
+    return finalSequence
 
 
-num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq = ParseJson()
+def Complement(base):
+    """
+    Returns the complementary base
+    """
 
-# staples
-stapleStartBases, stapleEndBases = StapleSearch(staples, num_strands, length_strands)
-# scaffold
-scaffoldStartBase, scaffoldEndBase = ScaffoldSearch(scaffold, num_strands, length_strands)
+    if base == 'A':
+        return 'T'
+    elif base == 'T':
+        return 'A'
+    elif base == 'G':
+        return 'C'
+    elif base == 'C':
+        return 'G'
+    else:
+        sys.exit("Not a valid base")
 
-print(stapleStartBases)
-print(stapleEndBases)
-print(scaffoldStartBase)
-print(scaffoldEndBase)
+
+def FindScaffoldBase(base, scaffoldSequence):
+    """
+    Runs through scaffold to find the letter at position base. 
+    If found, returns complement of that letter
+    """
+
+    baseLetter = -1
+    for i in range(len(scaffoldSequence)):
+        if base[0] == scaffoldSequence[i][0] and base[1] == scaffoldSequence[i][1]:
+            baseLetter = Complement(scaffoldSequence[i][2])
+
+    if baseLetter == -1:
+        sys.exit("Staple not connected to scaffold")
+    return baseLetter
 
 
-# endBase, finalSequence = FindScaffoldSeq(
-#     scaffold, scaffoldStartBase, scaffold_seq)
+def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
+    """
+    Finds staple sequences, returns them in a list of lists
+    """
+    
+    finalSequence = [None] * len(stapleStartBases)
 
-# PrintStrand(finalSequence)
+    for i in range(len(stapleStartBases)):
+
+        currentBase = stapleStartBases[i]
+        currentBlock = staples[currentBase[0]][currentBase[1]]
+
+        baseLetter = FindScaffoldBase(currentBase, scaffoldSequence)
+        currentBase.append(baseLetter)
+        finalSequence[i] = [currentBase]
+
+        nextBase, nextBlock = Traverse(staples, currentBase)
+
+        # Traverse scaffold until nextBase is [-1,-1]
+        while nextBase != [-1, -1]:
+
+            currentBase = nextBase
+            currentBlock = nextBlock
+
+            baseLetter = FindScaffoldBase(currentBase, scaffoldSequence)
+            currentBase.append(baseLetter)
+            finalSequence[i].append(currentBase)
+
+            nextBase, nextBlock = Traverse(staples, currentBase)
+
+    return finalSequence
+
+def main():
+    """
+    Main program loop
+    """
+    
+    # load data
+    num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
+
+    # staples
+    stapleStartBases, stapleEndBases = StapleSearch(
+        staples, num_strands, length_strands)
+
+    # scaffold
+    scaffoldStartBase, scaffoldEndBase = ScaffoldSearch(
+        scaffold, num_strands, length_strands)
+
+    # Returns scaffold sequence
+    scaffoldSequence = FindScaffoldSequence(
+        scaffold, scaffoldStartBase, rawScaffoldSequence)
+
+    # Returns staple sequences
+    stapleSequence = FindStapleSequences(
+        staples, stapleStartBases, scaffoldSequence)
+
+    # IO
+    PrintScaffold(scaffoldSequence, 1)
+    PrintStaples(stapleSequence, 1)
+
+main()
