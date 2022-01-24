@@ -138,19 +138,19 @@ def FindStartEnd(staples, num_strands, length_strands):
 #     return scaffoldStartBase, scaffoldEndBase
 
 
-def ValidateScaffold(startBase, endBase):
-    """
-    Check if start and end base connect correctly
-    """
+# def ValidateScaffold(startBase, endBase):
+#     """
+#     Check if start and end base connect correctly
+#     """
 
-    # check if end and start base are next to each other!
-    if startBase[0] != endBase[0]:
-        sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
-    else:
-        if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
-        elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
-            sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+#     # check if end and start base are next to each other!
+#     if startBase[0] != endBase[0]:
+#         sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+#     else:
+#         if endBase[0] % 2 == 0 and endBase[1]+1 != startBase[1]:
+#             sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
+#         elif endBase[0] % 2 == 1 and endBase[1]-1 != startBase[1]:
+#             sys.exit("Start and end of scaffold do not connect!\nMake sure the start and end bases connect and that you don't have multiple scaffolds")
 
 
 def Traverse(strand, startBase):
@@ -197,6 +197,14 @@ def TraverseEntire(strand, startSearchBase):
         currentBase = nextBase
 
         nextBase, nextBlock = Traverse(strand, currentBase)
+        # Catch infinite loop
+        if nextBase == startSearchBase:
+            print("Error: Loop detected at base: " +
+                  str(startSearchBase[0]) + "[" + str(startSearchBase[1]) + "]")
+            print("Make sure staple or scaffold at this base has a start and end base")
+            sys.exit("Scaffold or staple does not have breakpoint")
+
+        
 
     endBase = currentBase
 
@@ -223,6 +231,13 @@ def TraverseEntireReverse(strand, startSearchBase):
         currentBase = prevBase
 
         prevBase, prevBlock = ReverseTraverse(strand, currentBase)
+
+        # Catch infinite loop when strand doesnt have breakpoint
+        if prevBase == startSearchBase:
+            print("Error: Loop detected at base: " +
+                  str(startSearchBase[0]) + "[" + str(startSearchBase[1]) + "]")
+            print("Make sure staple or scaffold at this base has a start and end")
+            sys.exit("Scaffold or staple does not have breakpoint")
 
     startBase = currentBase
 
@@ -281,34 +296,33 @@ def FindLength(strand, startSearchBase):
     return length
 
 
-def PrintScaffold(sequence, view=0):
+# def PrintScaffold(sequence, view=0):
+#     """
+#     Prints scaffold, 0 = detailed view, 1 = cadnano view
+#     """
+#     print("Scaffold: ")
+
+#     if view == 0:
+#         for seq in sequence:
+#             print(seq)
+#     elif view == 1:
+#         print("Start,End,Sequence,Length")
+#         print(str(sequence[0][0]) + "[" + str(sequence[0][1]) + "]," +
+#               str(sequence[-1][0]) + "[" + str(sequence[-1][1]) + "],", end='')
+#         cnt = 0
+#         for j in range(len(sequence)):
+#             print(str(sequence[j][2]), end='')
+#             cnt += 1
+#         print("," + str(cnt))
+
+#     print("")
+
+
+def PrintSequence(sequence, inputString, view=1):
     """
-    Prints scaffold, 0 = detailed view, 1 = cadnano view
+    Prints sequence, 0 = detailed view, 1 = cadnano view
     """
-    print("Scaffold: ")
-
-    if view == 0:
-        for seq in sequence:
-            print(seq)
-    elif view == 1:
-        print("Start,End,Sequence,Length")
-        print(str(sequence[0][0]) + "[" + str(sequence[0][1]) + "]," +
-              str(sequence[-1][0]) + "[" + str(sequence[-1][1]) + "],", end='')
-        cnt = 0
-        for j in range(len(sequence)):
-            print(str(sequence[j][2]), end='')
-            cnt += 1
-        print("," + str(cnt))
-
-    print("")
-
-
-def PrintStaples(sequence, view=0):
-    """
-    Prints staples, 0 = detailed view, 1 = cadnano view
-    """
-    print("Staples:")
-
+    print(inputString + ":")
     if view == 0:
         for i in range(len(sequence)):
             print("Staple " + str(i) + ":")
@@ -363,6 +377,9 @@ def FindAllScaffolds(scaffold, scaffoldStartBase, rawScaffoldSequence):
     """
 
     lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
+
+    if lengthScaffolds == []:
+        sys.exit("No scaffold found")
     maxIndex = np.argmax(lengthScaffolds)
     maxRange = len(lengthScaffolds)
 
@@ -440,14 +457,20 @@ def FindScaffoldBase(base, scaffoldSequence):
     """
 
     baseLetter = -1
-    for i in range(len(scaffoldSequence)):
-        if base[0] == scaffoldSequence[i][0] and base[1] == scaffoldSequence[i][1]:
-            baseLetter = Complement(scaffoldSequence[i][2])
+    # For each scaffold
+    for j in range(len(scaffoldSequence)):
+        # For every base in scaffold
+        currentScaffold = scaffoldSequence[j]
+        for i in range(len(currentScaffold)):
+            # If base matches staple base, return complement
+            if base[0] == currentScaffold[i][0] and base[1] == currentScaffold[i][1]:
+                baseLetter = Complement(currentScaffold[i][2])
 
     # If no corresponding scaffold is found, assign 'A'
     if baseLetter == -1:
         baseLetter = 'A'
         # sys.exit("Staple not connected to scaffold")
+
     return baseLetter
 
 
@@ -484,60 +507,33 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
     return finalSequence
 
 
-# def main():
-#     """
-#     Main program loop
-#     """
+def main():
+    """
+    Main program loop
+    """
 
-#     # load data
-#     num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
+    # load data
+    num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
 
-#     # staples
-#     stapleStartBases, stapleEndBases = FindStartEnd(
-#         staples, num_strands, length_strands)
+    # staples
+    stapleStartBases, stapleEndBases = FindStartEnd(
+        staples, num_strands, length_strands)
 
-#     # scaffold
-#     scaffoldStartBase, scaffoldEndBase = ScaffoldSearch(
-#         scaffold, num_strands, length_strands)
+    # scaffold
+    scaffoldStartBase, scaffoldEndBase = FindStartEnd(
+        scaffold, num_strands, length_strands)
 
-#     # Returns scaffold sequence
-#     scaffoldSequence = FindScaffoldSequence(
-#         scaffold, scaffoldStartBase, rawScaffoldSequence)
+    # Returns scaffold sequence
+    scaffoldSequence = FindAllScaffolds(
+        scaffold, scaffoldStartBase, rawScaffoldSequence)
 
-#     # Returns staple sequences
-#     stapleSequence = FindStapleSequences(
-#         staples, stapleStartBases, scaffoldSequence)
+    # Returns staple sequences
+    stapleSequence = FindStapleSequences(
+        staples, stapleStartBases, scaffoldSequence)
 
-#     # IO
-#     PrintScaffold(scaffoldSequence, 1)
-#     PrintStaples(stapleSequence, 1)
+    # IO
+    PrintSequence(scaffoldSequence, "Scaffold")
+    PrintSequence(stapleSequence, "Staple")
 
-# main()
 
-# load data
-num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
-
-# staples
-stapleStartBases, stapleEndBases = FindStartEnd(
-    staples, num_strands, length_strands)
-
-# scaffold
-scaffoldStartBase, scaffoldEndBase = FindStartEnd(
-    scaffold, num_strands, length_strands)
-
-# Find scaffolds
-scaffoldSequence = FindAllScaffolds(
-    scaffold, scaffoldStartBase, rawScaffoldSequence)
-PrintStaples(scaffoldSequence, 1)
-
-# # Returns scaffold sequence
-# scaffoldSequence = FindScaffoldSequence(
-#     scaffold, scaffoldStartBase, rawScaffoldSequence)
-
-# # Returns staple sequences
-# stapleSequence = FindStapleSequences(
-#     staples, stapleStartBases, scaffoldSequence)
-
-# # IO
-# PrintScaffold(scaffoldSequence, 1)
-# PrintStaples(stapleSequence, 1)
+main()
