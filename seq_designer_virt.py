@@ -1,6 +1,7 @@
 import json
 import sys
 import numpy as np
+import random
 
 
 def ParseJson():
@@ -46,9 +47,9 @@ def ParseJson():
     return num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq
 
 
-def StapleSearch(staples, num_strands, length_strands):
+def FindStartEnd(staples, num_strands, length_strands):
     """
-    Returns all startbases of staple strands
+    Returns all startbases and endbases of strand
     """
     stapleStartBases = []
     # Check all strands
@@ -74,67 +75,67 @@ def StapleSearch(staples, num_strands, length_strands):
     return stapleStartBases, stapleEndBases
 
 
-def ScaffoldSearch(scaffold, num_strands, length_strands):
-    """
-    Looks for a start base and returns if found.
-    If not found, exits program
-    """
+# def ScaffoldSearch(scaffold, num_strands, length_strands):
+#     """
+#     Looks for a start base and returns if found.
+#     If not found, exits program
+#     """
 
-    currentBase = [0, 0]  # Start searching at strand 0, base 0
-    currentBlock = scaffold[currentBase[0]][currentBase[1]]
+#     currentBase = [0, 0]  # Start searching at strand 0, base 0
+#     currentBlock = scaffold[currentBase[0]][currentBase[1]]
 
-    # Go through first empty bases until nonempty base is found
-    while currentBlock == [-1, -1, -1, -1]:
+#     # Go through first empty bases until nonempty base is found
+#     while currentBlock == [-1, -1, -1, -1]:
 
-        # Shift one base to the right
-        nextBase = [currentBase[0], currentBase[1]+1]
-        nextBlock = scaffold[nextBase[0]][nextBase[1]]
+#         # Shift one base to the right
+#         nextBase = [currentBase[0], currentBase[1]+1]
+#         nextBlock = scaffold[nextBase[0]][nextBase[1]]
 
-        # If no scaffold found in all strands
-        if(nextBase[1] == length_strands-1 and nextBase[0] == num_strands - 1):
-            sys.exit("Scaffold does not exist")
+#         # If no scaffold found in all strands
+#         if(nextBase[1] == length_strands-1 and nextBase[0] == num_strands - 1):
+#             sys.exit("Scaffold does not exist")
 
-        # If entire strand is empty, start searching next strand at base 0
-        if(nextBase[1] == length_strands-1):
-            nextBase = [currentBase[0]+1, 0]
-            nextBlock = scaffold[nextBase[0]][nextBase[1]]
+#         # If entire strand is empty, start searching next strand at base 0
+#         if(nextBase[1] == length_strands-1):
+#             nextBase = [currentBase[0]+1, 0]
+#             nextBlock = scaffold[nextBase[0]][nextBase[1]]
 
-        currentBase = nextBase
-        currentBlock = nextBlock
+#         currentBase = nextBase
+#         currentBlock = nextBlock
 
-    firstNonEmpty = currentBase
+#     firstNonEmpty = currentBase
 
-    # From first nonempty base, traverse until end is reached
-    while currentBase != [-1, -1]:
-        nextBase, nextBlock = Traverse(scaffold, currentBase)
+#     # From first nonempty base, traverse until end is reached
+#     while currentBase != [-1, -1]:
+#         nextBase, nextBlock = Traverse(scaffold, currentBase)
 
-        # Break if end base is found
-        if nextBase == [-1, -1]:
-            break
+#         # Break if end base is found
+#         if nextBase == [-1, -1]:
+#             break
 
-        # If a loop is reached, there is no breakpoint
-        if nextBase == firstNonEmpty:
-            sys.exit("Scaffold does not have breakpoint")
+#         # If a loop is reached, there is no breakpoint
+#         if nextBase == firstNonEmpty:
+#             sys.exit("Scaffold does not have breakpoint")
 
-        currentBlock = nextBlock
-        currentBase = nextBase
+#         currentBlock = nextBlock
+#         currentBase = nextBase
 
-    endBase = currentBase
+#     endBase = currentBase
 
-    # For even strands start base is on the right of end base
-    if endBase[0] % 2 == 0:
-        scaffoldStartBase = [endBase[0], endBase[1]+1]
-    # For odd strands start base is on the left of end base
-    else:
-        scaffoldStartBase = [endBase[0], endBase[1]-1]
+#     # For even strands start base is on the right of end base
+#     if endBase[0] % 2 == 0:
+#         scaffoldStartBase = [endBase[0], endBase[1]+1]
+#     # For odd strands start base is on the left of end base
+#     else:
+#         scaffoldStartBase = [endBase[0], endBase[1]-1]
 
-    # Find corresponding end base
-    scaffoldEndBase = TraverseEntire(scaffold, scaffoldStartBase)
+#     # Find corresponding end base
+#     scaffoldEndBase = TraverseEntire(scaffold, scaffoldStartBase)
 
-    # Check if start and end align
-    ValidateScaffold(scaffoldStartBase, scaffoldEndBase)
+#     # Check if start and end align
+#     ValidateScaffold(scaffoldStartBase, scaffoldEndBase)
 
-    return scaffoldStartBase, scaffoldEndBase
+#     return scaffoldStartBase, scaffoldEndBase
 
 
 def ValidateScaffold(startBase, endBase):
@@ -154,7 +155,7 @@ def ValidateScaffold(startBase, endBase):
 
 def Traverse(strand, startBase):
     """
-    Traverse strand by a single base
+    Traverse strand by a Multiple base
     """
 
     currentBase = startBase
@@ -166,7 +167,7 @@ def Traverse(strand, startBase):
 
 def ReverseTraverse(strand, startBase):
     """
-    Traverse strand by a single base in reverse
+    Traverse strand by a Multiple base in reverse
     """
 
     currentBase = startBase
@@ -228,6 +229,58 @@ def TraverseEntireReverse(strand, startSearchBase):
     return startBase
 
 
+def CheckMultipleBase(startBase):
+    """
+    Checks if startBase contains multiple bases, if so returns true.
+    ex. startBase = [0,50] -> returns false
+    ex. startBase = [[3, 82], [0, 45]] -> returns true
+    to avoid len(startBase) == 2 for both startBases above
+    """
+
+    return any(isinstance(el, list) for el in startBase)
+
+
+def FindLength(strand, startSearchBase):
+    """
+    Returns length of sequences of the start bases provided
+    """
+    maxRange = len(startSearchBase)
+    length = [None] * len(startSearchBase)
+
+    # To avoid i.e. [0,50] and [[3, 82], [0, 45]] both having length 2
+    if len(startSearchBase) == 2:
+        if CheckMultipleBase(startSearchBase):
+            maxRange = 2
+        else:
+            length = [None] * 1
+            maxRange = 1
+
+    for i in range(maxRange):
+        if CheckMultipleBase(startSearchBase):
+            currentBase = startSearchBase[i]
+        else:
+            currentBase = startSearchBase
+
+        currentBlock = strand[currentBase[0]][currentBase[1]]
+        length[i] = 0
+
+        # If current block is empty, return empty base
+        if currentBlock == [-1, -1, -1, -1]:
+            break
+
+        nextBase, nextBlock = Traverse(strand, currentBase)
+        length[i] = length[i] + 1
+        # Traverse scaffold until next base is [-1,-1]
+        while nextBase != [-1, -1]:
+            currentBlock = nextBlock
+            currentBase = nextBase
+
+            nextBase, nextBlock = Traverse(strand, currentBase)
+            length[i] = length[i] + 1
+
+    return length
+
+
 def PrintScaffold(sequence, view=0):
     """
     Prints scaffold, 0 = detailed view, 1 = cadnano view
@@ -278,9 +331,63 @@ def PrintStaples(sequence, view=0):
     print("")
 
 
+def RandomScaffoldSequence(length):
+    """
+    Generates random sequence of size length
+    """
+    randomSequence = []
+
+    # Random number based on uniform distribution
+    for i in range(length):
+        randomNum = random.uniform(0, 1)
+
+        if randomNum <= 0.25:
+            randomSequence.append('A')
+        elif randomNum > 0.25 and randomNum <= 0.5:
+            randomSequence.append('T')
+        elif randomNum > 0.5 and randomNum <= 0.75:
+            randomSequence.append('G')
+        elif randomNum > 0.75:
+            randomSequence.append('C')
+
+    # Convert list to string
+    randomSequence = ''.join(randomSequence)
+
+    return randomSequence
+
+
+def FindAllScaffolds(scaffold, scaffoldStartBase, rawScaffoldSequence):
+    """
+    Returns all scaffold sequences, assigns the rawScaffoldSequence to the 
+    longest scaffold. The others get pseudorandomly generated sequences
+    """
+
+    lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
+    maxIndex = np.argmax(lengthScaffolds)
+    maxRange = len(lengthScaffolds)
+
+    finalSequence = [None] * maxRange
+
+    for i in range(maxRange):
+        if CheckMultipleBase(scaffoldStartBase):
+            currentBase = scaffoldStartBase[i]
+        else:
+            currentBase = scaffoldStartBase
+
+        if i == maxIndex:
+            finalSequence[i] = FindScaffoldSequence(
+                scaffold, currentBase, rawScaffoldSequence)
+        else:
+            randomScaffoldSequence = RandomScaffoldSequence(lengthScaffolds[i])
+            finalSequence[i] = FindScaffoldSequence(
+                scaffold, currentBase, randomScaffoldSequence)
+
+    return finalSequence
+
+
 def FindScaffoldSequence(scaffold, startBase, rawScaffoldSequence):
     """
-    Finds and returns scaffold sequence
+    Finds and returns scaffold sequence from startBase
     """
 
     finalSequence = []
@@ -348,7 +455,7 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
     """
     Finds staple sequences, returns them in a list of lists
     """
-    
+
     finalSequence = [None] * len(stapleStartBases)
 
     for i in range(len(stapleStartBases)):
@@ -376,32 +483,61 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
 
     return finalSequence
 
-def main():
-    """
-    Main program loop
-    """
 
-    # load data
-    num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
+# def main():
+#     """
+#     Main program loop
+#     """
 
-    # staples
-    stapleStartBases, stapleEndBases = StapleSearch(
-        staples, num_strands, length_strands)
+#     # load data
+#     num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
 
-    # scaffold
-    scaffoldStartBase, scaffoldEndBase = ScaffoldSearch(
-        scaffold, num_strands, length_strands)
+#     # staples
+#     stapleStartBases, stapleEndBases = FindStartEnd(
+#         staples, num_strands, length_strands)
 
-    # Returns scaffold sequence
-    scaffoldSequence = FindScaffoldSequence(
-        scaffold, scaffoldStartBase, rawScaffoldSequence)
+#     # scaffold
+#     scaffoldStartBase, scaffoldEndBase = ScaffoldSearch(
+#         scaffold, num_strands, length_strands)
 
-    # Returns staple sequences
-    stapleSequence = FindStapleSequences(
-        staples, stapleStartBases, scaffoldSequence)
+#     # Returns scaffold sequence
+#     scaffoldSequence = FindScaffoldSequence(
+#         scaffold, scaffoldStartBase, rawScaffoldSequence)
 
-    # IO
-    PrintScaffold(scaffoldSequence, 1)
-    PrintStaples(stapleSequence, 1)
+#     # Returns staple sequences
+#     stapleSequence = FindStapleSequences(
+#         staples, stapleStartBases, scaffoldSequence)
 
-main()
+#     # IO
+#     PrintScaffold(scaffoldSequence, 1)
+#     PrintStaples(stapleSequence, 1)
+
+# main()
+
+# load data
+num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
+
+# staples
+stapleStartBases, stapleEndBases = FindStartEnd(
+    staples, num_strands, length_strands)
+
+# scaffold
+scaffoldStartBase, scaffoldEndBase = FindStartEnd(
+    scaffold, num_strands, length_strands)
+
+# Find scaffolds
+scaffoldSequence = FindAllScaffolds(
+    scaffold, scaffoldStartBase, rawScaffoldSequence)
+PrintStaples(scaffoldSequence, 1)
+
+# # Returns scaffold sequence
+# scaffoldSequence = FindScaffoldSequence(
+#     scaffold, scaffoldStartBase, rawScaffoldSequence)
+
+# # Returns staple sequences
+# stapleSequence = FindStapleSequences(
+#     staples, stapleStartBases, scaffoldSequence)
+
+# # IO
+# PrintScaffold(scaffoldSequence, 1)
+# PrintStaples(stapleSequence, 1)
