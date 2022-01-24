@@ -184,13 +184,13 @@ def TraverseEntire(strand, startSearchBase):
     currentBase = startSearchBase
     currentBlock = strand[currentBase[0]][currentBase[1]]
 
-    # If current base is empty, return empty base
+    # If current block is empty, return empty base
     if currentBlock == [-1, -1, -1, -1]:
         return [-1, -1]
 
     nextBase, nextBlock = Traverse(strand, currentBase)
 
-    # Traverse scaffold until prevBase is [-1,-1]
+    # Traverse scaffold until next base is [-1,-1]
     while nextBase != [-1, -1]:
         currentBlock = nextBlock
         currentBase = nextBase
@@ -210,13 +210,13 @@ def TraverseEntireReverse(strand, startSearchBase):
     currentBase = startSearchBase
     currentBlock = strand[currentBase[0]][currentBase[1]]
 
-    # If current base is empty, return empty base
+    # If current block is empty, return empty base
     if currentBlock == [-1, -1, -1, -1]:
         return [-1, -1]
 
     prevBase, prevBlock = ReverseTraverse(strand, currentBase)
 
-    # Traverse scaffold until prevBase is [-1,-1]
+    # Traverse scaffold until previous base is [-1,-1]
     while prevBase != [-1, -1]:
         currentBlock = prevBlock
         currentBase = prevBase
@@ -337,8 +337,10 @@ def FindScaffoldBase(base, scaffoldSequence):
         if base[0] == scaffoldSequence[i][0] and base[1] == scaffoldSequence[i][1]:
             baseLetter = Complement(scaffoldSequence[i][2])
 
+    # If no corresponding scaffold is found, assign 'A'
     if baseLetter == -1:
-        sys.exit("Staple not connected to scaffold")
+        baseLetter = 'A'
+        # sys.exit("Staple not connected to scaffold")
     return baseLetter
 
 
