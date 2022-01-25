@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import random
 from virtual_scaffold import sequence_creator
+import time
 
 
 def ParseJson():
@@ -24,6 +25,7 @@ def ParseJson():
         cadnanoData = json.load(json_data)
 
     strandData = cadnanoData['vstrands']
+    # numStrands = 176
     numStrands = len(strandData)
     lengthStrands = len(strandData[0]['scaf'])
 
@@ -314,12 +316,20 @@ def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence):
 
     lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
 
+    # Exit if no scaffold is found
     if lengthScaffolds == []:
         sys.exit("No scaffolds found")
+
     maxIndex = np.argmax(lengthScaffolds)
     maxRange = len(lengthScaffolds)
-
     finalSequence = [None] * maxRange
+
+    # Exit if scaffold sequence provided is not long enough
+    if lengthScaffolds[maxIndex] > len(rawScaffoldSequence):
+        sys.exit(
+            "Scaffold sequence given is not long enough.\nScaffold input length: "
+             + str(len(rawScaffoldSequence)) + "\nLongest scaffold: " 
+             + str(lengthScaffolds[maxIndex]) + "\nPlease provide a longer sequence.")
 
     for i in range(maxRange):
         if CheckMultipleBase(scaffoldStartBase):
@@ -477,4 +487,7 @@ def main():
     PrintSequence(stapleSequence, "Staples")
 
 
+time_start = time.time()
 main()
+time_elapsed = (time.time() - time_start)
+print("Time elapsed: " + str(time_elapsed) + " seconds")

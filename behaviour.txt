@@ -1,2 +1,25 @@
 - cadnano breaks when removing strand such that i.e. 0,1,2,3 -> 1,2,3
-- what do row, col mean. currently unused
+- what do row, col mean? currently unused
+- code not very efficient, runs through each base and reverses until start is found.
+  larger files (i.e. cuboctahedron takes 18 seconds). worth optimizing? stat printout:
+- every staple and scaffold needs to have a start and end point
+
+Tue Jan 25 12:02:02 2022    prof.dat
+
+         27092256 function calls (27086069 primitive calls) in 21.762 seconds
+
+   Ordered by: internal time
+   List reduced from 2225 to 10 due to restriction <10>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 26109975    8.484    0.000    8.484    0.000 seq_designer_virt.py:83(ReverseTraverse)
+     9616    6.551    0.001    6.569    0.001 seq_designer_virt.py:360(FindStapleBase)
+    38400    6.279    0.000   14.764    0.000 seq_designer_virt.py:133(TraverseEntireReverse)
+    18278    0.030    0.000    0.046    0.000 /home/sebbe/.local/lib/python3.8/site-packages/openpyxl/utils/cell.py:74(_get_column_letter)
+        1    0.030    0.030    0.030    0.030 /usr/lib/python3.8/json/decoder.py:343(raw_decode)
+      366    0.024    0.000    0.024    0.000 {built-in method marshal.loads}
+    48056    0.019    0.000    0.019    0.000 seq_designer_virt.py:68(ForwardTraverse)
+313268/312626    0.018    0.000    0.018    0.000 {built-in method builtins.len}
+        2    0.016    0.008   14.795    7.397 seq_designer_virt.py:168(FindStartEnd)
+      317    0.014    0.000    0.014    0.000 {built-in method builtins.compile}
+
