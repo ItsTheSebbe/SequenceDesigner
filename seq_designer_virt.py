@@ -2,11 +2,12 @@ import json
 import sys
 import numpy as np
 import random
+from virtual_scaffold import sequence_creator
 
 
 def ParseJson():
     """
-    Parse cadnano json file
+    Parse cadnano json file, returns number of strands 
     """
 
     if len(sys.argv) < 3:
@@ -14,48 +15,60 @@ def ParseJson():
             "No file provided. Please use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
     else:
         inputJson = sys.argv[1]
-        inputScaffold = sys.argv[2]
 
-    with open(inputScaffold, 'r') as file:
-        scaffold_seq = file.read().replace('\n', '')
-
-    # outputFile = sys.argv[2]
-
+    # Load cadnano data
     with open(inputJson, 'r') as json_data:
-        cadnano_data = json.load(json_data)
+        cadnanoData = json.load(json_data)
 
-    # filename = cadnano_data['name']
+    # filename = cadnanoData['name']
 
-    strand_data = cadnano_data['vstrands']
-    num_strands = len(strand_data)
-    length_strands = len(strand_data[0]['scaf'])
+    strand_data = cadnanoData['vstrands']
+    numStrands = len(strand_data)
+    lengthStrands = len(strand_data[0]['scaf'])
 
     # Initialize arrays
-    scaffold = np.empty(num_strands, dtype=object)
-    staples = np.empty(num_strands, dtype=object)
-    row = np.empty(num_strands, dtype=object)
-    col = np.empty(num_strands, dtype=object)
-    num = np.empty(num_strands, dtype=object)
+    scaffold = np.empty(numStrands, dtype=object)
+    staples = np.empty(numStrands, dtype=object)
+    row = np.empty(numStrands, dtype=object)
+    col = np.empty(numStrands, dtype=object)
+    num = np.empty(numStrands, dtype=object)
 
-    for i in range(num_strands):
+    for i in range(numStrands):
         scaffold[i] = strand_data[i]['scaf']
         staples[i] = strand_data[i]['stap']
         row[i] = strand_data[i]['row']
         col[i] = strand_data[i]['col']
         num[i] = strand_data[i]['num']
 
-    return num_strands, length_strands, scaffold, staples, row, col, num, strand_data, scaffold_seq
+    return numStrands, lengthStrands, scaffold, staples
 
 
-def FindStartEnd(staples, num_strands, length_strands):
+def RawScaffoldSequence():
+    """
+    Takes raw scaffold sequence from input file
+    """
+
+    if len(sys.argv) < 3:
+        sys.exit(
+            "No file provided. Please use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+    else:
+        inputScaffold = sys.argv[2]
+
+    with open(inputScaffold, 'r') as file:
+        scaffold_seq = file.read().replace('\n', '')
+
+    return scaffold_seq
+
+
+def FindStartEnd(staples, numStrands, lengthStrands):
     """
     Returns all startbases and endbases of strand
     """
     stapleStartBases = []
     # Check all strands
-    for i in range(num_strands):
+    for i in range(numStrands):
         # Check all bases in each strand
-        for j in range(length_strands):
+        for j in range(lengthStrands):
 
             startSearchBase = [i, j]
             startBase = TraverseEntireReverse(staples, startSearchBase)
@@ -75,7 +88,7 @@ def FindStartEnd(staples, num_strands, length_strands):
     return stapleStartBases, stapleEndBases
 
 
-# def ScaffoldSearch(scaffold, num_strands, length_strands):
+# def ScaffoldSearch(scaffold, numStrands, lengthStrands):
 #     """
 #     Looks for a start base and returns if found.
 #     If not found, exits program
@@ -92,11 +105,11 @@ def FindStartEnd(staples, num_strands, length_strands):
 #         nextBlock = scaffold[nextBase[0]][nextBase[1]]
 
 #         # If no scaffold found in all strands
-#         if(nextBase[1] == length_strands-1 and nextBase[0] == num_strands - 1):
+#         if(nextBase[1] == lengthStrands-1 and nextBase[0] == numStrands - 1):
 #             sys.exit("Scaffold does not exist")
 
 #         # If entire strand is empty, start searching next strand at base 0
-#         if(nextBase[1] == length_strands-1):
+#         if(nextBase[1] == lengthStrands-1):
 #             nextBase = [currentBase[0]+1, 0]
 #             nextBlock = scaffold[nextBase[0]][nextBase[1]]
 
@@ -203,8 +216,6 @@ def TraverseEntire(strand, startSearchBase):
                   str(startSearchBase[0]) + "[" + str(startSearchBase[1]) + "]")
             print("Make sure staple or scaffold at this base has a start and end base")
             sys.exit("Scaffold or staple does not have breakpoint")
-
-        
 
     endBase = currentBase
 
@@ -344,10 +355,12 @@ def PrintSequence(sequence, inputString, view=1):
 
     print("")
 
+# Unused
+
 
 def RandomScaffoldSequence(length):
     """
-    Generates random sequence of size length
+    Generates random sequence of size length with each base equal probability
     """
     randomSequence = []
 
@@ -395,7 +408,8 @@ def FindAllScaffolds(scaffold, scaffoldStartBase, rawScaffoldSequence):
             finalSequence[i] = FindScaffoldSequence(
                 scaffold, currentBase, rawScaffoldSequence)
         else:
-            randomScaffoldSequence = RandomScaffoldSequence(lengthScaffolds[i])
+            # Generate random sequence based on GC content, etc (from virtual_scaffold.py)
+            randomScaffoldSequence, _ = sequence_creator(lengthScaffolds[i])
             finalSequence[i] = FindScaffoldSequence(
                 scaffold, currentBase, randomScaffoldSequence)
 
@@ -513,15 +527,17 @@ def main():
     """
 
     # load data
-    num_strands, length_strands, scaffold, staples, row, col, num, strand_data, rawScaffoldSequence = ParseJson()
+    numStrands, lengthStrands, scaffold, staples = ParseJson()
+    numStrands = 4
+    rawScaffoldSequence = RawScaffoldSequence()
 
     # staples
     stapleStartBases, stapleEndBases = FindStartEnd(
-        staples, num_strands, length_strands)
+        staples, numStrands, lengthStrands)
 
     # scaffold
     scaffoldStartBase, scaffoldEndBase = FindStartEnd(
-        scaffold, num_strands, length_strands)
+        scaffold, numStrands, lengthStrands)
 
     # Returns scaffold sequence
     scaffoldSequence = FindAllScaffolds(
