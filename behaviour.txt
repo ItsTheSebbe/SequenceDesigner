@@ -1,0 +1,2 @@
+- cadnano breaks when removing strand such that i.e. 0,1,2,3 -> 1,2,3
+- what do row, col mean. currently unused
