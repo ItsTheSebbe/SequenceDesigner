@@ -5,7 +5,7 @@ import random
 from virtual_scaffold import sequence_creator
 import time
 
-
+# old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
 def ParseJson():
     """
     Parse cadnano json file given by as command line argument.
@@ -16,7 +16,11 @@ def ParseJson():
     # Find json file location from argument input
     if len(sys.argv) < 3:
         sys.exit(
-            "No file provided. Please use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+            "Not enough files provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+    elif len(sys.argv) > 3:
+        sys.exit(
+            "Too many files provided provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+
     else:
         inputJson = sys.argv[1]
 
@@ -25,7 +29,6 @@ def ParseJson():
         cadnanoData = json.load(json_data)
 
     strandData = cadnanoData['vstrands']
-    # numStrands = 176
     numStrands = len(strandData)
     lengthStrands = len(strandData[0]['scaf'])
 
@@ -46,6 +49,65 @@ def ParseJson():
 
     return numStrands, lengthStrands, scaffolds, staples
 
+# New parser, puts empty strands if strand is skipped, i.e. 0,1,3,4...
+def ParseJsonNew():
+    """
+    Parse cadnano json file given by as command line argument.
+    Returns number of strands, length of strands (number of bases),
+    scaffolds and staple data.
+    """
+
+    # Find json file location from argument input
+    if len(sys.argv) < 3:
+        sys.exit(
+            "Not enough files provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+    elif len(sys.argv) > 3:
+        sys.exit(
+            "Too many files provided provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+
+    else:
+        inputJson = sys.argv[1]
+
+    # Load cadnano data
+    with open(inputJson, 'r') as json_data:
+        cadnanoData = json.load(json_data)
+
+    strandData = cadnanoData['vstrands']
+
+    # Numbers contained in strands
+    nums = []
+    for i in range(len(strandData)):
+        currNum = strandData[i]['num']
+        nums.append(currNum)
+
+    maxNum = max(nums)+1
+
+    numStrands = maxNum
+    lengthStrands = len(strandData[0]['scaf'])
+
+    # Initialize arrays
+    scaffolds = np.empty(numStrands, dtype=object)
+    staples = np.empty(numStrands, dtype=object)
+    # row = np.empty(numStrands, dtype=object)
+    # col = np.empty(numStrands, dtype=object)
+    # num = np.empty(numStrands, dtype=object)
+    
+    emptyStrand = []
+    for i in range(lengthStrands):
+        emptyStrand.append([-1,-1,-1,-1])
+
+    # Load data of scaffolds and staples
+    for i in range(numStrands):
+        # If i exist in nums, set strandData
+        if i in nums:
+            scaffolds[i] = strandData[nums.index(i)]['scaf']
+            staples[i] = strandData[nums.index(i)]['stap']
+        # if strand doesn't exist
+        else:
+            scaffolds[i] = emptyStrand
+            staples[i] = emptyStrand
+
+    return numStrands, lengthStrands, scaffolds, staples
 
 def RawScaffoldSequence():
     """
@@ -328,8 +390,8 @@ def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence):
     if lengthScaffolds[maxIndex] > len(rawScaffoldSequence):
         sys.exit(
             "Scaffold sequence given is not long enough.\nScaffold input length: "
-             + str(len(rawScaffoldSequence)) + "\nLongest scaffold: " 
-             + str(lengthScaffolds[maxIndex]) + "\nPlease provide a longer sequence.")
+            + str(len(rawScaffoldSequence)) + "\nLongest scaffold: "
+            + str(lengthScaffolds[maxIndex]) + "\nPlease provide a longer sequence.")
 
     for i in range(maxRange):
         if CheckMultipleBase(scaffoldStartBase):
@@ -463,7 +525,7 @@ def main():
     """
 
     # load data
-    numStrands, lengthStrands, scaffolds, staples = ParseJson()
+    numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
     rawScaffoldSequence = RawScaffoldSequence()
 
     # staples
