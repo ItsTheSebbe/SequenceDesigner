@@ -6,6 +6,8 @@ from virtual_scaffold import sequence_creator
 import time
 
 # old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
+
+
 def ParseJson():
     """
     Parse cadnano json file given by as command line argument.
@@ -50,6 +52,8 @@ def ParseJson():
     return numStrands, lengthStrands, scaffolds, staples
 
 # New parser, puts empty strands if strand is skipped, i.e. 0,1,3,4...
+
+
 def ParseJsonNew():
     """
     Parse cadnano json file given by as command line argument.
@@ -91,10 +95,10 @@ def ParseJsonNew():
     # row = np.empty(numStrands, dtype=object)
     # col = np.empty(numStrands, dtype=object)
     # num = np.empty(numStrands, dtype=object)
-    
+
     emptyStrand = []
     for i in range(lengthStrands):
-        emptyStrand.append([-1,-1,-1,-1])
+        emptyStrand.append([-1, -1, -1, -1])
 
     # Load data of scaffolds and staples
     for i in range(numStrands):
@@ -108,6 +112,7 @@ def ParseJsonNew():
             staples[i] = emptyStrand
 
     return numStrands, lengthStrands, scaffolds, staples
+
 
 def RawScaffoldSequence():
     """
@@ -486,37 +491,39 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
     return finalSequence
 
 
-def PrintSequence(sequence, inputName, view=1):
+def PrintSequence(sequence, fileName, view=1):
     """
-    Prints sequence to terminal, 0 = detailed view, 1 = cadnano view
+    Prints sequence to file, 0 = detailed view, 1 = cadnano view
     """
-    # Print name
-    print(inputName + ":")
+
+    # Open file
+    outputFile = open(fileName, 'w')
 
     # Print in detailed view
     if view == 0:
         for i in range(len(sequence)):
-            print("Staple " + str(i) + ":")
+            outputFile.write("Staple " + str(i) + ":\n")
             for seq in sequence[i]:
-                print(seq)
-            print("")
+                outputFile.write(str(seq) + "\n")
+            outputFile.write("\n")
 
     # Print in cadnano style view
     elif view == 1:
-        print("Start,End,Sequence,Length")
+        outputFile.write("Start,End,Sequence,Length\n")
         for i in range(len(sequence)):
             currentSequence = sequence[i]
-            print(str(currentSequence[0][0]) + "[" + str(currentSequence[0][1]) + "]," +
-                  str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],", end='')
+            outputFile.write(str(currentSequence[0][0]) + "[" + str(currentSequence[0][1]) + "]," +
+                  str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],")
             cnt = 0
             for j in range(len(currentSequence)):
-                print(str(currentSequence[j][2]), end='')
+                outputFile.write(str(currentSequence[j][2]))
                 cnt += 1
-            print("," + str(cnt))
+            outputFile.write("," + str(cnt) + "\n")
     else:
         sys.exit("Not a valid print mode.")
 
-    print("")
+    # Close file
+    outputFile.close()
 
 
 def main():
@@ -525,28 +532,38 @@ def main():
     """
 
     # load data
+    print("Parsing json file...")
     numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
+
+    print("Parsing scaffold sequence...")
     rawScaffoldSequence = RawScaffoldSequence()
 
     # staples
+    print("Finding staples...")
     stapleStartBases, stapleEndBases = FindStartEnd(
         staples, numStrands, lengthStrands)
 
     # scaffolds
+    print("Finding scaffolds...")
     scaffoldStartBase, scaffoldEndBase = FindStartEnd(
         scaffolds, numStrands, lengthStrands)
 
     # Returns scaffolds sequence
+    print("Generating scaffold sequences...")
     scaffoldSequence = FindScaffoldSequences(
         scaffolds, scaffoldStartBase, rawScaffoldSequence)
 
     # Returns staple sequences
+    print("Generating staple sequences...")
     stapleSequence = FindStapleSequences(
         staples, stapleStartBases, scaffoldSequence)
 
     # IO
-    PrintSequence(scaffoldSequence, "Scaffolds")
-    PrintSequence(stapleSequence, "Staples")
+    print("Outputting to file...")
+    PrintSequence(scaffoldSequence, "scaffolds.txt")
+    PrintSequence(stapleSequence, "staples.txt")
+
+    print("Done!")
 
 
 time_start = time.time()

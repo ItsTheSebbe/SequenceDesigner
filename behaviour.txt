@@ -23,3 +23,5 @@ Tue Jan 25 12:02:02 2022    prof.dat
         2    0.016    0.008   14.795    7.397 seq_designer_virt.py:168(FindStartEnd)
       317    0.014    0.000    0.014    0.000 {built-in method builtins.compile}
 
+if staple not connect && more than 5 A's in a row, give warning
+if staple/scaffold longer than 60 or shorter than 15, return warning
