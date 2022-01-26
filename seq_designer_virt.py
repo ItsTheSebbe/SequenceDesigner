@@ -4,6 +4,7 @@ import numpy as np
 import random
 from virtual_scaffold import sequence_creator
 import time
+from termcolor import colored
 
 # old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
 
@@ -513,7 +514,7 @@ def PrintSequence(sequence, fileName, view=1):
         for i in range(len(sequence)):
             currentSequence = sequence[i]
             outputFile.write(str(currentSequence[0][0]) + "[" + str(currentSequence[0][1]) + "]," +
-                  str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],")
+                             str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],")
             cnt = 0
             for j in range(len(currentSequence)):
                 outputFile.write(str(currentSequence[j][2]))
@@ -524,6 +525,16 @@ def PrintSequence(sequence, fileName, view=1):
 
     # Close file
     outputFile.close()
+
+
+def VerifyStaples(stapleSequence):
+    for i in range(len(stapleSequence)):
+        if len(stapleSequence[i]) > 60:
+            print(colored("Warning: staple " + str(i) +
+                          " has length " + str(len(stapleSequence[i])) + " (>60)", 'red'))
+        elif len(stapleSequence[i]) < 15:
+            print(colored("Warning: staple " + str(i) +
+                          " has length " + str(len(stapleSequence[i]))+ " (<15)", 'red'))
 
 
 def main():
@@ -557,6 +568,10 @@ def main():
     print("Generating staple sequences...")
     stapleSequence = FindStapleSequences(
         staples, stapleStartBases, scaffoldSequence)
+
+    # Verifying staples
+    print("Verifying staples")
+    VerifyStaples(stapleSequence)
 
     # IO
     print("Outputting to file...")
