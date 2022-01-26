@@ -527,6 +527,8 @@ def PrintSequence(sequence, fileName, view=1):
 
 
 def VerifyStaples(stapleSequence):
+
+    # Check for staples longer than 60 or shorter than 15
     for i in range(len(stapleSequence)):
         if len(stapleSequence[i]) > 60:
             print("Warning: staple " + str(i) +
@@ -534,7 +536,16 @@ def VerifyStaples(stapleSequence):
         elif len(stapleSequence[i]) < 15:
             print("Warning: staple " + str(i) +
                   " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has length " + str(len(stapleSequence[i])) + " (<15)")
-        
+
+    # # Check for many A's next to eachother
+    # for i in range(len(stapleSequence)):
+    #     if len(stapleSequence[i]) >= 7:
+    #         for j in range(len(stapleSequence[i]) - 6):
+    #             if stapleSequence[i][j][2] == stapleSequence[i][j+1][2] == stapleSequence[i][j+2][2] == stapleSequence[i][j+3][2] == stapleSequence[i][j+4][2] == stapleSequence[i][j+5][2] == stapleSequence[i][j+6][2] == 'A':
+    #                 print("Warning: staple " + str(i) +
+    #                       " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " more than 7 consecutive A's")
+    #                 break
+
 
 def main():
     """
