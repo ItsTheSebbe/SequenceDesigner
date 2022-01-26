@@ -4,7 +4,6 @@ import numpy as np
 import random
 from virtual_scaffold import sequence_creator
 import time
-from termcolor import colored
 
 # old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
 
@@ -346,7 +345,7 @@ def RandomScaffoldSequence(length):
 
 def FindSingleScaffold(scaffold, startBase, inputSequence):
     """
-    Appends base letter from inputSequence to each base in scaffold. 
+    Appends base letter from inputSequence to each base in scaffold.
     Returns sequence containing bases and base letters.
     """
 
@@ -378,7 +377,7 @@ def FindSingleScaffold(scaffold, startBase, inputSequence):
 
 def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence):
     """
-    Returns all scaffolds sequences, assigns the rawScaffoldSequence to the 
+    Returns all scaffolds sequences, assigns the rawScaffoldSequence to the
     longest scaffold. The other scaffolds get pseudorandomly generated sequences.
     """
 
@@ -436,7 +435,7 @@ def Complement(inputBase):
 
 def FindStapleBase(stapleBase, scaffoldSequence):
     """
-    Runs through all scaffolds to find the letter at same position as the staple base. 
+    Runs through all scaffolds to find the letter at same position as the staple base.
     If found, returns complement of that letter. If not found, the staple base
     is not connected to a scaffold, and it will be assigned the base letter 'A'.
     """
@@ -460,7 +459,7 @@ def FindStapleBase(stapleBase, scaffoldSequence):
 
 def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
     """
-    Traverses all staple sequences, finds complementary scaffold base letter and 
+    Traverses all staple sequences, finds complementary scaffold base letter and
     appends it to each staple base. Returns all staple sequences.
     """
 
@@ -530,12 +529,12 @@ def PrintSequence(sequence, fileName, view=1):
 def VerifyStaples(stapleSequence):
     for i in range(len(stapleSequence)):
         if len(stapleSequence[i]) > 60:
-            print(colored("Warning: staple " + str(i) +
-                          " has length " + str(len(stapleSequence[i])) + " (>60)", 'red'))
+            print("Warning: staple " + str(i) +
+                  " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has length " + str(len(stapleSequence[i])) + " (>60)")
         elif len(stapleSequence[i]) < 15:
-            print(colored("Warning: staple " + str(i) +
-                          " has length " + str(len(stapleSequence[i]))+ " (<15)", 'red'))
-
+            print("Warning: staple " + str(i) +
+                  " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has length " + str(len(stapleSequence[i])) + " (<15)")
+        
 
 def main():
     """
@@ -570,7 +569,7 @@ def main():
         staples, stapleStartBases, scaffoldSequence)
 
     # Verifying staples
-    print("Verifying staples")
+    print("Verifying staples...")
     VerifyStaples(stapleSequence)
 
     # IO

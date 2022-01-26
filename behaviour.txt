@@ -24,4 +24,3 @@ Tue Jan 25 12:02:02 2022    prof.dat
       317    0.014    0.000    0.014    0.000 {built-in method builtins.compile}
 
 if staple not connect && more than 5 A's in a row, give warning
-if staple/scaffold longer than 60 or shorter than 15, return warning
