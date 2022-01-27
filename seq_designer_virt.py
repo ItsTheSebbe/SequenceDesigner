@@ -527,7 +527,11 @@ def PrintSequence(sequence, fileName, view=1):
 
 
 def VerifyStaples(stapleSequence):
-
+    """
+    Checks for staples shorter than 15 or longer than 60, returns warning if found.
+    Also checks if there are staples with more than 7 consecutive A's at the edge,
+    which might indicate a long staple strand which is not connected to a scaffold.
+    """
     # Check for staples longer than 60 or shorter than 15
     for i in range(len(stapleSequence)):
         if len(stapleSequence[i]) > 60:
@@ -537,14 +541,21 @@ def VerifyStaples(stapleSequence):
             print("Warning: staple " + str(i) +
                   " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has length " + str(len(stapleSequence[i])) + " (<15)")
 
-    # # Check for many A's next to eachother
-    # for i in range(len(stapleSequence)):
-    #     if len(stapleSequence[i]) >= 7:
-    #         for j in range(len(stapleSequence[i]) - 6):
-    #             if stapleSequence[i][j][2] == stapleSequence[i][j+1][2] == stapleSequence[i][j+2][2] == stapleSequence[i][j+3][2] == stapleSequence[i][j+4][2] == stapleSequence[i][j+5][2] == stapleSequence[i][j+6][2] == 'A':
-    #                 print("Warning: staple " + str(i) +
-    #                       " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " more than 7 consecutive A's")
-    #                 break
+    # Check for 7 consecutive A's next to eachother at the staple edges
+    for i in range(len(stapleSequence)):
+        if len(stapleSequence[i]) >= 7:
+            if (stapleSequence[i][0][2] == stapleSequence[i][1][2] ==
+                    stapleSequence[i][2][2] == stapleSequence[i][3][2] ==
+                    stapleSequence[i][4][2] == stapleSequence[i][5][2] ==
+                    stapleSequence[i][6][2] == 'A'):
+                print("Warning: staple " + str(i) +
+                      " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has 7 or more consecutive A's at the start")
+            if (stapleSequence[i][-1][2] == stapleSequence[i][-2][2] ==
+                stapleSequence[i][-3][2] == stapleSequence[i][-4][2] ==
+                stapleSequence[i][-5][2] == stapleSequence[i][-6][2] ==
+                    stapleSequence[i][-7][2] == 'A'):
+                print("Warning: staple " + str(i) +
+                      " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has 7 or more consecutive A's at the end")
 
 
 def main():
@@ -552,19 +563,23 @@ def main():
     Main program loop
     """
 
-    # load data
+    # Set random seed
+    random.seed(10)
+
+    # Load json data
     print("Parsing json file...")
     numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
 
+    # Load raw scaffold sequence
     print("Parsing scaffold sequence...")
     rawScaffoldSequence = RawScaffoldSequence()
 
-    # staples
+    # Find staples
     print("Finding staples...")
     stapleStartBases, stapleEndBases = FindStartEnd(
         staples, numStrands, lengthStrands)
 
-    # scaffolds
+    # Find scaffolds
     print("Finding scaffolds...")
     scaffoldStartBase, scaffoldEndBase = FindStartEnd(
         scaffolds, numStrands, lengthStrands)
