@@ -5,54 +5,6 @@ import random
 from virtual_scaffold import sequence_creator
 import time
 
-# old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
-
-
-def ParseJson():
-    """
-    Parse cadnano json file given by as command line argument.
-    Returns number of strands, length of strands (number of bases),
-    scaffolds and staple data.
-    """
-
-    # Find json file location from argument input
-    if len(sys.argv) < 3:
-        sys.exit(
-            "Not enough files provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
-    elif len(sys.argv) > 3:
-        sys.exit(
-            "Too many files provided provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
-
-    else:
-        inputJson = sys.argv[1]
-
-    # Load cadnano data
-    with open(inputJson, 'r') as json_data:
-        cadnanoData = json.load(json_data)
-
-    strandData = cadnanoData['vstrands']
-    numStrands = len(strandData)
-    lengthStrands = len(strandData[0]['scaf'])
-
-    # Initialize arrays
-    scaffolds = np.empty(numStrands, dtype=object)
-    staples = np.empty(numStrands, dtype=object)
-    # row = np.empty(numStrands, dtype=object)
-    # col = np.empty(numStrands, dtype=object)
-    # num = np.empty(numStrands, dtype=object)
-
-    # Load data of scaffolds and staples
-    for i in range(numStrands):
-        scaffolds[i] = strandData[i]['scaf']
-        staples[i] = strandData[i]['stap']
-        # row[i] = strandData[i]['row']
-        # col[i] = strandData[i]['col']
-        # num[i] = strandData[i]['num']
-
-    return numStrands, lengthStrands, scaffolds, staples
-
-# New parser, puts empty strands if strand is skipped, i.e. 0,1,3,4...
-
 
 def ParseJsonNew():
     """
@@ -60,6 +12,8 @@ def ParseJsonNew():
     Returns number of strands, length of strands (number of bases),
     scaffolds and staple data.
     """
+
+    print("Parsing json file...")
 
     # Find json file location from argument input
     if len(sys.argv) < 3:
@@ -115,6 +69,11 @@ def ParseJsonNew():
 
 
 def CreateLookUpScaffold(numStrands, lengthStrands):
+    """
+    Returns a look up table for the scaffold in string formatm
+    initialized with empty initial values = ''.
+    """
+
     lookUpScaffold = np.zeros((numStrands, lengthStrands), dtype='U1')
     return lookUpScaffold
 
@@ -123,6 +82,8 @@ def RawScaffoldSequence():
     """
     Returns raw scaffold sequence from input file
     """
+
+    print("Parsing scaffold sequence...")
 
     # Find scaffold sequence file location from argument input
     if len(sys.argv) < 3:
@@ -238,11 +199,13 @@ def TraverseEntireReverse(strand, startSearchBase):
     return startBase
 
 
-def FindStart(strand, numStrands, lengthStrands):
+def FindStartStaples(strand, numStrands, lengthStrands):
     """
     Returns all start and end bases of given strand.
     """
 
+    print("Finding staples...")
+    
     startBases = []
     # Check all strands
     for i in range(numStrands):
@@ -259,11 +222,6 @@ def FindStart(strand, numStrands, lengthStrands):
     startBases = [list(x) for x in set(tuple(x)
                                        for x in startBases)]
 
-    # # Find corresponding end bases
-    # endBases = [None]*len(startBases)
-    # for i in range(len(startBases)):
-    #     endBases[i] = TraverseEntireForward(strand, startBases[i])
-
     return startBases
 
 
@@ -272,6 +230,8 @@ def TraverseEntireReverseCheck(strand, startSearchBase, lookUpScaffold):
     Traverse entire strand in reverse, returns start base.
     If start search base doesn't have adjacent strands, i.e. [-1,-1,-1,-1],
     return [-1,-1]. If no breakpoint is found, will exit.
+    Will return [-1,-1] if currentBase has already been checked through
+    look up scaffold.
     """
 
     currentBase = startSearchBase
@@ -281,10 +241,13 @@ def TraverseEntireReverseCheck(strand, startSearchBase, lookUpScaffold):
     if currentBlock == [-1, -1, -1, -1]:
         return [-1, -1]
 
+    # Set mark that it has been checked
     lookUpScaffold[currentBase[0]][currentBase[1]] = '0'
 
+    # Traverse backwards
     prevBase, prevBlock = ReverseTraverse(strand, currentBase)
 
+    # If already checked before, return early
     if lookUpScaffold[prevBase[0]][prevBase[1]] == '0':
         return [-1, -1]
 
@@ -292,11 +255,13 @@ def TraverseEntireReverseCheck(strand, startSearchBase, lookUpScaffold):
     while prevBase != [-1, -1]:
         currentBlock = prevBlock
         currentBase = prevBase
-
+        # Set mark that it has been checked
         lookUpScaffold[currentBase[0]][currentBase[1]] = '0'
 
+        # Traverse backwards
         prevBase, prevBlock = ReverseTraverse(strand, currentBase)
 
+        # If already checked before, return early
         if lookUpScaffold[prevBase[0]][prevBase[1]] == '0':
             return [-1, -1]
 
@@ -312,11 +277,13 @@ def TraverseEntireReverseCheck(strand, startSearchBase, lookUpScaffold):
     return startBase
 
 
-def FindStartScaffold(strand, numStrands, lengthStrands, lookUpScaffold):
+def FindStartScaffolds(strand, numStrands, lengthStrands, lookUpScaffold):
     """
     Returns all start and end bases of given strand.
     """
 
+    print("Finding scaffolds...")
+    
     startBases = []
     # Check all strands
     for i in range(numStrands):
@@ -333,11 +300,6 @@ def FindStartScaffold(strand, numStrands, lengthStrands, lookUpScaffold):
     # Extracts only unique start bases
     startBases = [list(x) for x in set(tuple(x)
                                        for x in startBases)]
-
-    # # Find corresponding end bases
-    # endBases = [None]*len(startBases)
-    # for i in range(len(startBases)):
-    #     endBases[i] = TraverseEntireForward(strand, startBases[i])
 
     return startBases
 
@@ -396,34 +358,7 @@ def FindLength(strand, startSearchBase):
     return length
 
 
-# Unused
-def RandomScaffoldSequence(length):
-    """
-    Generates random sequence of size length with each base equal probability.
-    """
-
-    randomSequence = []
-
-    # Random number based on uniform distribution
-    for i in range(length):
-        randomNum = random.uniform(0, 1)
-
-        if randomNum <= 0.25:
-            randomSequence.append('A')
-        elif randomNum > 0.25 and randomNum <= 0.5:
-            randomSequence.append('T')
-        elif randomNum > 0.5 and randomNum <= 0.75:
-            randomSequence.append('G')
-        elif randomNum > 0.75:
-            randomSequence.append('C')
-
-    # Convert list to string
-    randomSequence = ''.join(randomSequence)
-
-    return randomSequence
-
-
-def FindSingleScaffold(scaffold, startBase, inputSequence):
+def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold):
     """
     Appends base letter from inputSequence to each base in scaffold.
     Returns sequence containing bases and base letters.
@@ -437,6 +372,8 @@ def FindSingleScaffold(scaffold, startBase, inputSequence):
     currentBase.append(inputSequence[0])
     finalSequence.append(currentBase)
 
+    lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[0]
+
     nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
     cnt = 1
 
@@ -449,18 +386,22 @@ def FindSingleScaffold(scaffold, startBase, inputSequence):
         currentBase.append(inputSequence[cnt])
         finalSequence.append(currentBase)
 
+        lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[cnt]
+
         nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
         cnt += 1
 
     return finalSequence
 
 
-def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence):
+def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold):
     """
     Returns all scaffolds sequences, assigns the rawScaffoldSequence to the
     longest scaffold. The other scaffolds get pseudorandomly generated sequences.
     """
 
+    print("Generating scaffold sequences...")
+    
     lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
 
     # Exit if no scaffold is found
@@ -486,12 +427,12 @@ def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence):
 
         if i == maxIndex:
             finalSequence[i] = FindSingleScaffold(
-                scaffold, currentBase, rawScaffoldSequence)
+                scaffold, currentBase, rawScaffoldSequence, lookUpScaffold)
         else:
             # Generate random sequence based on GC content, etc (from virtual_scaffold.py)
             randomScaffoldSequence, _ = sequence_creator(lengthScaffolds[i])
             finalSequence[i] = FindSingleScaffold(
-                scaffold, currentBase, randomScaffoldSequence)
+                scaffold, currentBase, randomScaffoldSequence, lookUpScaffold)
 
     return finalSequence
 
@@ -513,36 +454,31 @@ def Complement(inputBase):
         sys.exit("Not a valid base")
 
 
-def FindStapleBase(stapleBase, scaffoldSequence):
-    """
-    Runs through all scaffolds to find the letter at same position as the staple base.
-    If found, returns complement of that letter. If not found, the staple base
-    is not connected to a scaffold, and it will be assigned the base letter 'A'.
+def FindStapleBase(stapleBase, lookUpScaffold):
     """
 
-    baseLetter = -1
-    # For each scaffold
-    for j in range(len(scaffoldSequence)):
-        # For every base in scaffold
-        currentScaffold = scaffoldSequence[j]
-        for i in range(len(currentScaffold)):
-            # If base matches staple base, return complement
-            if stapleBase[0] == currentScaffold[i][0] and stapleBase[1] == currentScaffold[i][1]:
-                baseLetter = Complement(currentScaffold[i][2])
+    """
+    # Look up base letter from look up table
+    scaffoldBaseLetter = lookUpScaffold[stapleBase[0], stapleBase[1]]
 
     # If no corresponding scaffolds is found, assign 'A'
-    if baseLetter == -1:
-        baseLetter = 'A'
+    if scaffoldBaseLetter == '':
+        stapleBaseLetter = 'A'
+    # Otherwise take complement of scaffold
+    else:
+        stapleBaseLetter = Complement(scaffoldBaseLetter)
 
-    return baseLetter
+    return stapleBaseLetter
 
 
-def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
+def FindStapleSequences(staples, stapleStartBases, lookUpScaffold):
     """
     Traverses all staple sequences, finds complementary scaffold base letter and
     appends it to each staple base. Returns all staple sequences.
     """
 
+    print("Generating staple sequences...")
+    
     finalSequence = [None] * len(stapleStartBases)
 
     for i in range(len(stapleStartBases)):
@@ -550,7 +486,7 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
         currentBase = stapleStartBases[i]
         currentBlock = staples[currentBase[0]][currentBase[1]]
 
-        baseLetter = FindStapleBase(currentBase, scaffoldSequence)
+        baseLetter = FindStapleBase(currentBase, lookUpScaffold)
         currentBase.append(baseLetter)
         finalSequence[i] = [currentBase]
 
@@ -562,7 +498,7 @@ def FindStapleSequences(staples, stapleStartBases, scaffoldSequence):
             currentBase = nextBase
             currentBlock = nextBlock
 
-            baseLetter = FindStapleBase(currentBase, scaffoldSequence)
+            baseLetter = FindStapleBase(currentBase, lookUpScaffold)
             currentBase.append(baseLetter)
             finalSequence[i].append(currentBase)
 
@@ -576,6 +512,8 @@ def PrintSequence(sequence, fileName, view=1):
     Prints sequence to file, 0 = detailed view, 1 = cadnano view
     """
 
+    print("Outputting data to " + fileName + "...")
+    
     # Open file
     outputFile = open(fileName, 'w')
 
@@ -612,6 +550,9 @@ def VerifyStaples(stapleSequence):
     Also checks if there are staples with more than 7 consecutive A's at the edge,
     which might indicate a long staple strand which is not connected to a scaffold.
     """
+    
+    print("Verifying staples...")
+    
     # Check for staples longer than 60 or shorter than 15
     for i in range(len(stapleSequence)):
         if len(stapleSequence[i]) > 60:
@@ -647,41 +588,34 @@ def main():
     random.seed(10)
 
     # Load json data
-    print("Parsing json file...")
     numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
 
+    # Initialize look up table for scaffold
+    lookUpScaffold = CreateLookUpScaffold(numStrands, lengthStrands)
+
     # Load raw scaffold sequence
-    print("Parsing scaffold sequence...")
     rawScaffoldSequence = RawScaffoldSequence()
 
     # Find staples
-    print("Finding staples...")
-    stapleStartBases = FindStart(
+    stapleStartBases = FindStartStaples(
         staples, numStrands, lengthStrands)
 
-    lookUpScaffold = CreateLookUpScaffold(numStrands, lengthStrands)
-
     # Find scaffolds
-    print("Finding scaffolds...")
-    scaffoldStartBase = FindStartScaffold(
+    scaffoldStartBase = FindStartScaffolds(
         scaffolds, numStrands, lengthStrands, lookUpScaffold)
 
     # Returns scaffolds sequence
-    print("Generating scaffold sequences...")
     scaffoldSequence = FindScaffoldSequences(
-        scaffolds, scaffoldStartBase, rawScaffoldSequence)
+        scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold)
 
     # Returns staple sequences
-    print("Generating staple sequences...")
     stapleSequence = FindStapleSequences(
-        staples, stapleStartBases, scaffoldSequence)
+        staples, stapleStartBases, lookUpScaffold)
 
     # Verifying staples
-    print("Verifying staples...")
     VerifyStaples(stapleSequence)
 
     # IO
-    print("Outputting to file...")
     PrintSequence(scaffoldSequence, "scaffolds.txt")
     PrintSequence(stapleSequence, "staples.txt")
 
