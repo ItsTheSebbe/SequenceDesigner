@@ -68,7 +68,7 @@ def ParseJsonNew():
     return numStrands, lengthStrands, scaffolds, staples
 
 
-def CreateLookUpScaffold(numStrands, lengthStrands):
+def CreateLookUpTable(numStrands, lengthStrands):
     """
     Returns a look up table for the scaffold in string formatm
     initialized with empty initial values = ''.
@@ -205,7 +205,7 @@ def FindStartStaples(strand, numStrands, lengthStrands):
     """
 
     print("Finding staples...")
-    
+
     startBases = []
     # Check all strands
     for i in range(numStrands):
@@ -283,7 +283,7 @@ def FindStartScaffolds(strand, numStrands, lengthStrands, lookUpScaffold):
     """
 
     print("Finding scaffolds...")
-    
+
     startBases = []
     # Check all strands
     for i in range(numStrands):
@@ -401,7 +401,7 @@ def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence, look
     """
 
     print("Generating scaffold sequences...")
-    
+
     lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
 
     # Exit if no scaffold is found
@@ -456,8 +456,10 @@ def Complement(inputBase):
 
 def FindStapleBase(stapleBase, lookUpScaffold):
     """
-
+    Find staple base by taking the complement of the scaffold base 
+    taken from the look up scaffold.
     """
+
     # Look up base letter from look up table
     scaffoldBaseLetter = lookUpScaffold[stapleBase[0], stapleBase[1]]
 
@@ -471,14 +473,14 @@ def FindStapleBase(stapleBase, lookUpScaffold):
     return stapleBaseLetter
 
 
-def FindStapleSequences(staples, stapleStartBases, lookUpScaffold):
+def FindStapleSequences(staples, stapleStartBases, lookUpScaffold, lookUpStaple):
     """
-    Traverses all staple sequences, finds complementary scaffold base letter and
+    Finds complementary scaffold base letter from look up scaffold.
     appends it to each staple base. Returns all staple sequences.
     """
 
     print("Generating staple sequences...")
-    
+
     finalSequence = [None] * len(stapleStartBases)
 
     for i in range(len(stapleStartBases)):
@@ -489,6 +491,8 @@ def FindStapleSequences(staples, stapleStartBases, lookUpScaffold):
         baseLetter = FindStapleBase(currentBase, lookUpScaffold)
         currentBase.append(baseLetter)
         finalSequence[i] = [currentBase]
+
+        lookUpStaple[currentBase[0], currentBase[1]] = baseLetter
 
         nextBase, nextBlock = ForwardTraverse(staples, currentBase)
 
@@ -502,6 +506,8 @@ def FindStapleSequences(staples, stapleStartBases, lookUpScaffold):
             currentBase.append(baseLetter)
             finalSequence[i].append(currentBase)
 
+            lookUpStaple[currentBase[0], currentBase[1]] = baseLetter
+
             nextBase, nextBlock = ForwardTraverse(staples, currentBase)
 
     return finalSequence
@@ -513,7 +519,7 @@ def PrintSequence(sequence, fileName, view=1):
     """
 
     print("Outputting data to " + fileName + "...")
-    
+
     # Open file
     outputFile = open(fileName, 'w')
 
@@ -550,9 +556,9 @@ def VerifyStaples(stapleSequence):
     Also checks if there are staples with more than 7 consecutive A's at the edge,
     which might indicate a long staple strand which is not connected to a scaffold.
     """
-    
+
     print("Verifying staples...")
-    
+
     # Check for staples longer than 60 or shorter than 15
     for i in range(len(stapleSequence)):
         if len(stapleSequence[i]) > 60:
@@ -579,19 +585,68 @@ def VerifyStaples(stapleSequence):
                       " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has 7 or more consecutive A's at the end")
 
 
+def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple):
+    """
+    Print visual representation of the sequences in cadnano style format.
+    """
+
+    fileName = "Sequence_Visualized.txt"
+    print("Outputting data to " + fileName + "...")
+    outputFile = open(fileName, 'w')
+
+    for i in range(numStrands):
+        if i % 2 == 0:
+            outputFile.write("Scaffold " + "{:<5}".format(str(i)) + "|")
+            for j in range(lengthStrands):
+                if lookUpScaffold[i, j] == '':
+                    outputFile.write("-")
+                else:
+                    outputFile.write(lookUpScaffold[i, j])
+            outputFile.write("|\n")
+
+            outputFile.write("Staple " + "{:<7}".format(str(i)) + "|")
+
+            for j in range(lengthStrands):
+                if lookUpStaple[i, j] == '':
+                    outputFile.write("-")
+                else:
+                    outputFile.write(lookUpStaple[i, j])
+            outputFile.write("|\n\n")
+        else:
+            outputFile.write("Staple " + "{:<7}".format(str(i)) + "|")
+
+            for j in range(lengthStrands):
+                if lookUpStaple[i, j] == '':
+                    outputFile.write("-")
+                else:
+                    outputFile.write(lookUpStaple[i, j])
+            outputFile.write("|\n")
+            outputFile.write("Scaffold " + "{:<5}".format(str(i)) + "|")
+
+            for j in range(lengthStrands):
+                if lookUpScaffold[i, j] == '':
+                    outputFile.write("-")
+                else:
+                    outputFile.write(lookUpScaffold[i, j])
+            outputFile.write("|\n\n")
+
+    outputFile.close()
+
+
 def main():
     """
     Main program loop
     """
 
     # Set random seed
-    random.seed(10)
+    random.seed(0)
 
     # Load json data
     numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
 
     # Initialize look up table for scaffold
-    lookUpScaffold = CreateLookUpScaffold(numStrands, lengthStrands)
+    lookUpScaffold = CreateLookUpTable(numStrands, lengthStrands)
+    lookUpStaple = CreateLookUpTable(numStrands, lengthStrands)
 
     # Load raw scaffold sequence
     rawScaffoldSequence = RawScaffoldSequence()
@@ -610,7 +665,7 @@ def main():
 
     # Returns staple sequences
     stapleSequence = FindStapleSequences(
-        staples, stapleStartBases, lookUpScaffold)
+        staples, stapleStartBases, lookUpScaffold, lookUpStaple)
 
     # Verifying staples
     VerifyStaples(stapleSequence)
@@ -618,6 +673,7 @@ def main():
     # IO
     PrintSequence(scaffoldSequence, "scaffolds.txt")
     PrintSequence(stapleSequence, "staples.txt")
+    PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple)
 
     print("Done!")
 
