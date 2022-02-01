@@ -32,6 +32,7 @@ visualized_sequence.txt contains a nicely formatted visualization of the scaffol
 
 ## Example Output
 Here are some examples for the outputs using a small caDNAno file. (json_files/small_twobreak.json and M13mp18 scaffold). 
+
 ![image](https://user-images.githubusercontent.com/28595211/152023399-08882dd2-fa9e-4b99-ab19-b349729acefc.png)
 
 
