@@ -590,7 +590,7 @@ def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple):
     Print visual representation of the sequences in cadnano style format.
     """
 
-    fileName = "Sequence_Visualized.txt"
+    fileName = "visualized_sequence.txt"
     print("Outputting data to " + fileName + "...")
     outputFile = open(fileName, 'w')
 
