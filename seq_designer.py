@@ -2,7 +2,7 @@ import json
 import sys
 import numpy as np
 import random
-from virtual_scaffold import sequence_creator
+from scaffold_generator import sequence_creator
 import time
 
 
@@ -88,7 +88,7 @@ def RawScaffoldSequence():
     # Find scaffold sequence file location from argument input
     if len(sys.argv) < 3:
         sys.exit(
-            "No file provided. Please use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+            "Not enough files provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
     else:
         inputScaffold = sys.argv[2]
 
@@ -451,7 +451,7 @@ def Complement(inputBase):
     elif inputBase == 'C':
         return 'G'
     else:
-        sys.exit("Not a valid base")
+        sys.exit(str(inputBase) + " is not a valid base")
 
 
 def FindStapleBase(stapleBase, lookUpScaffold):

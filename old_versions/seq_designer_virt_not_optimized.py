@@ -2,7 +2,7 @@ import json
 import sys
 import numpy as np
 import random
-from virtual_scaffold import sequence_creator
+from scaffold_generator import sequence_creator
 import time
 
 # old parser, doesn't work if strands are not sequential, i.e. 0,1,3,4...
