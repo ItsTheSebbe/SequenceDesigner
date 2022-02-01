@@ -14,7 +14,7 @@ For example:
 python3 seq_designer.py json_files/test_virtual.json scaffold_files/M13mp18 
 ```
 ## Input
-The program will require two inputs as argument:
+The program will require two inputs as arguments:
 - cadnano .json file
 - scaffold sequence file
 
