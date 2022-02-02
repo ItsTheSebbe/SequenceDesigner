@@ -1,3 +1,4 @@
+import os
 import json
 import sys
 import numpy as np
@@ -31,6 +32,9 @@ def ParseJsonNew():
         cadnanoData = json.load(json_data)
 
     strandData = cadnanoData['vstrands']
+    if os.path.exists(sys.argv[1]):
+        fileName = os.path.basename(sys.argv[1])
+        fileName = os.path.splitext(fileName)[0]
 
     # Numbers contained in strands
     nums = []
@@ -65,7 +69,7 @@ def ParseJsonNew():
             scaffolds[i] = emptyStrand
             staples[i] = emptyStrand
 
-    return numStrands, lengthStrands, scaffolds, staples
+    return numStrands, lengthStrands, scaffolds, staples, fileName
 
 
 def CreateLookUpTable(numStrands, lengthStrands):
@@ -585,12 +589,11 @@ def VerifyStaples(stapleSequence):
                       " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has 7 or more consecutive A's at the end")
 
 
-def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple):
+def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName):
     """
     Print visual representation of the sequences in cadnano style format.
     """
 
-    fileName = "visualized_sequence.txt"
     print("Outputting data to " + fileName + "...")
     outputFile = open(fileName, 'w')
 
@@ -633,6 +636,21 @@ def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple):
     outputFile.close()
 
 
+def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName):
+    directoryName = fileName
+    scaffoldsFileName = "scaffolds_" + fileName + ".txt"
+    staplesFileName = "staples_" + fileName + ".txt"
+    visualizerFileName = "visualized_sequence_" + fileName + ".txt"
+
+    os.makedirs(directoryName, exist_ok=True)
+
+
+    PrintSequence(scaffoldSequence, os.path.join(directoryName, scaffoldsFileName))
+    PrintSequence(stapleSequence, os.path.join(directoryName, staplesFileName))
+    PrintVisualizer(numStrands, lengthStrands, lookUpScaffold,
+                    lookUpStaple, os.path.join(directoryName, visualizerFileName))
+
+
 def main():
     """
     Main program loop
@@ -642,7 +660,7 @@ def main():
     random.seed(0)
 
     # Load json data
-    numStrands, lengthStrands, scaffolds, staples = ParseJsonNew()
+    numStrands, lengthStrands, scaffolds, staples, fileName = ParseJsonNew()
 
     # Initialize look up table for scaffold
     lookUpScaffold = CreateLookUpTable(numStrands, lengthStrands)
@@ -671,9 +689,8 @@ def main():
     VerifyStaples(stapleSequence)
 
     # IO
-    PrintSequence(scaffoldSequence, "scaffolds.txt")
-    PrintSequence(stapleSequence, "staples.txt")
-    PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple)
+    OutputFiles(scaffoldSequence, stapleSequence, numStrands,
+                lengthStrands, lookUpScaffold, lookUpStaple, fileName)
 
     print("Done!")
 
