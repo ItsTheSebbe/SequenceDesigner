@@ -637,6 +637,9 @@ def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fil
 
 
 def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName):
+    """
+    Output files to folder with same name of input json file.
+    """
     directoryName = fileName
     scaffoldsFileName = "scaffolds_" + fileName + ".txt"
     staplesFileName = "staples_" + fileName + ".txt"
