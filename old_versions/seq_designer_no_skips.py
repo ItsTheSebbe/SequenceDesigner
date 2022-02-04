@@ -7,7 +7,7 @@ from scaffold_generator import sequence_creator
 import time
 
 
-def ParseJson():
+def ParseJsonNew():
     """
     Parse cadnano json file given by as command line argument.
     Returns number of strands, length of strands (number of bases),
@@ -23,6 +23,7 @@ def ParseJson():
     elif len(sys.argv) > 3:
         sys.exit(
             "Too many files provided provided.\nPlease use \"Python3 seq_designer.py <filename.json> <scaffoldseq.txt>\" ")
+
     else:
         inputJson = sys.argv[1]
 
@@ -31,8 +32,6 @@ def ParseJson():
         cadnanoData = json.load(json_data)
 
     strandData = cadnanoData['vstrands']
-
-    # Find filename without extension
     if os.path.exists(sys.argv[1]):
         fileName = os.path.basename(sys.argv[1])
         fileName = os.path.splitext(fileName)[0]
@@ -51,7 +50,9 @@ def ParseJson():
     # Initialize arrays
     scaffolds = np.empty(numStrands, dtype=object)
     staples = np.empty(numStrands, dtype=object)
-    skip = np.empty(numStrands, dtype=object)
+    # row = np.empty(numStrands, dtype=object)
+    # col = np.empty(numStrands, dtype=object)
+    # num = np.empty(numStrands, dtype=object)
 
     emptyStrand = []
     for i in range(lengthStrands):
@@ -63,14 +64,12 @@ def ParseJson():
         if i in nums:
             scaffolds[i] = strandData[nums.index(i)]['scaf']
             staples[i] = strandData[nums.index(i)]['stap']
-            skip[i] = strandData[nums.index(i)]['skip']
         # if strand doesn't exist
         else:
             scaffolds[i] = emptyStrand
             staples[i] = emptyStrand
-            skip[i] = 0
 
-    return numStrands, lengthStrands, scaffolds, staples, fileName, skip
+    return numStrands, lengthStrands, scaffolds, staples, fileName
 
 
 def CreateLookUpTable(numStrands, lengthStrands):
@@ -320,14 +319,13 @@ def CheckMultipleBase(startBase):
     return any(isinstance(el, list) for el in startBase)
 
 
-def FindLength(strand, startSearchBase, skip):
+def FindLength(strand, startSearchBase):
     """
     Returns length of sequences for the start bases provided.
     """
 
     maxRange = len(startSearchBase)
     length = [None] * len(startSearchBase)
-    lengthScaffoldsNoSkips = [None] * len(startSearchBase)
 
     # To avoid i.e. [0,50] and [[3, 82], [0, 45]] both having length 2
     if len(startSearchBase) == 2:
@@ -344,36 +342,27 @@ def FindLength(strand, startSearchBase, skip):
             currentBase = startSearchBase
 
         currentBlock = strand[currentBase[0]][currentBase[1]]
-        currentSkip = skip[currentBase[0]][currentBase[1]]
-
         length[i] = 0
-        lengthScaffoldsNoSkips[i] = 0
 
         # If current block is empty, return empty base
         if currentBlock == [-1, -1, -1, -1]:
             break
 
         nextBase, nextBlock = ForwardTraverse(strand, currentBase)
-
         length[i] = length[i] + 1
-        if currentSkip == 0:
-            lengthScaffoldsNoSkips[i] = lengthScaffoldsNoSkips[i] + 1
 
         # Traverse strand until next base is [-1,-1]
         while nextBase != [-1, -1]:
             currentBlock = nextBlock
             currentBase = nextBase
-            currentSkip = skip[currentBase[0]][currentBase[1]]
 
             nextBase, nextBlock = ForwardTraverse(strand, currentBase)
             length[i] = length[i] + 1
-            if currentSkip == 0:
-                lengthScaffoldsNoSkips[i] = lengthScaffoldsNoSkips[i] + 1
 
-    return length, lengthScaffoldsNoSkips
+    return length
 
 
-def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip):
+def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold):
     """
     Appends base letter from inputSequence to each base in scaffold.
     Returns sequence containing bases and base letters.
@@ -383,56 +372,33 @@ def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip)
 
     currentBase = startBase
     currentBlock = scaffold[currentBase[0]][currentBase[1]]
-    currentSkip = skip[currentBase[0]][currentBase[1]]
 
-    if currentSkip == 0:
-        currentBase.append(inputSequence[0])
-        finalSequence.append(currentBase)
+    currentBase.append(inputSequence[0])
+    finalSequence.append(currentBase)
 
-        lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[0]
-        cnt = 1
-
-    elif currentSkip == -1:
-        currentBase.append('X')
-        finalSequence.append(currentBase)
-
-        lookUpScaffold[currentBase[0], currentBase[1]] = 'X'
-
-    else:
-        sys.exit("Not a valid skip array in json file!")
+    lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[0]
 
     nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
+    cnt = 1
 
     # Traverse scaffold until nextBase is [-1,-1]
     while nextBase != [-1, -1]:
 
         currentBase = nextBase
         currentBlock = nextBlock
-        currentSkip = skip[currentBase[0]][currentBase[1]]
 
-        if currentSkip == 0:
+        currentBase.append(inputSequence[cnt])
+        finalSequence.append(currentBase)
 
-            currentBase.append(inputSequence[cnt])
-            finalSequence.append(currentBase)
-
-            lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[cnt]
-            cnt += 1
-
-        elif currentSkip == -1:
-            currentBase.append('X')
-            finalSequence.append(currentBase)
-
-            lookUpScaffold[currentBase[0], currentBase[1]] = 'X'
-
-        else:
-            sys.exit("Not a valid skip array in json file!")
+        lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[cnt]
 
         nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
+        cnt += 1
 
     return finalSequence
 
 
-def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip):
+def FindScaffoldSequences(scaffold, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold):
     """
     Returns all scaffolds sequences, assigns the rawScaffoldSequence to the
     longest scaffold. The other scaffolds get pseudorandomly generated sequences.
@@ -440,7 +406,7 @@ def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, loo
 
     print("Generating scaffold sequences...")
 
-    lengthScaffolds, lengthScaffoldsNoSkips = FindLength(scaffolds, scaffoldStartBase, skip)
+    lengthScaffolds = FindLength(scaffold, scaffoldStartBase)
 
     # Exit if no scaffold is found
     if lengthScaffolds == []:
@@ -450,14 +416,12 @@ def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, loo
     maxRange = len(lengthScaffolds)
     finalSequence = [None] * maxRange
 
-    # fix so it wrosk with skip
-
     # Exit if scaffold sequence provided is not long enough
-    if lengthScaffoldsNoSkips[maxIndex] > len(rawScaffoldSequence):
+    if lengthScaffolds[maxIndex] > len(rawScaffoldSequence):
         sys.exit(
             "Scaffold sequence given is not long enough.\nScaffold input length: "
             + str(len(rawScaffoldSequence)) + "\nLongest scaffold: "
-            + str(lengthScaffoldsNoSkips[maxIndex]) + "\nPlease provide a longer sequence.")
+            + str(lengthScaffolds[maxIndex]) + "\nPlease provide a longer sequence.")
 
     for i in range(maxRange):
         if CheckMultipleBase(scaffoldStartBase):
@@ -467,12 +431,12 @@ def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, loo
 
         if i == maxIndex:
             finalSequence[i] = FindSingleScaffold(
-                scaffolds, currentBase, rawScaffoldSequence, lookUpScaffold, skip)
+                scaffold, currentBase, rawScaffoldSequence, lookUpScaffold)
         else:
             # Generate random sequence based on GC content, etc (from virtual_scaffold.py)
-            randomScaffoldSequence, _ = sequence_creator(lengthScaffoldsNoSkips[i])
+            randomScaffoldSequence, _ = sequence_creator(lengthScaffolds[i])
             finalSequence[i] = FindSingleScaffold(
-                scaffolds, currentBase, randomScaffoldSequence, lookUpScaffold, skip)
+                scaffold, currentBase, randomScaffoldSequence, lookUpScaffold)
 
     return finalSequence
 
@@ -490,11 +454,6 @@ def Complement(inputBase):
         return 'C'
     elif inputBase == 'C':
         return 'G'
-
-    # Denotes a skip
-    elif inputBase == 'X':
-        return 'X'
-    
     else:
         sys.exit(str(inputBase) + " is not a valid base")
 
@@ -585,9 +544,8 @@ def PrintSequence(sequence, fileName, view=1):
                              str(currentSequence[-1][0]) + "[" + str(currentSequence[-1][1]) + "],")
             cnt = 0
             for j in range(len(currentSequence)):
-                if currentSequence[j][2] != 'X':
-                    outputFile.write(str(currentSequence[j][2]))
-                    cnt += 1
+                outputFile.write(str(currentSequence[j][2]))
+                cnt += 1
             outputFile.write("," + str(cnt) + "\n")
     else:
         sys.exit("Not a valid print mode.")
@@ -689,8 +647,8 @@ def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, loo
 
     os.makedirs(directoryName, exist_ok=True)
 
-    PrintSequence(scaffoldSequence, os.path.join(
-        directoryName, scaffoldsFileName))
+
+    PrintSequence(scaffoldSequence, os.path.join(directoryName, scaffoldsFileName))
     PrintSequence(stapleSequence, os.path.join(directoryName, staplesFileName))
     PrintVisualizer(numStrands, lengthStrands, lookUpScaffold,
                     lookUpStaple, os.path.join(directoryName, visualizerFileName))
@@ -705,7 +663,7 @@ def main():
     random.seed(0)
 
     # Load json data
-    numStrands, lengthStrands, scaffolds, staples, fileName, skip = ParseJson()
+    numStrands, lengthStrands, scaffolds, staples, fileName = ParseJsonNew()
 
     # Initialize look up table for scaffold
     lookUpScaffold = CreateLookUpTable(numStrands, lengthStrands)
@@ -724,7 +682,7 @@ def main():
 
     # Returns scaffolds sequence
     scaffoldSequence = FindScaffoldSequences(
-        scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip)
+        scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold)
 
     # Returns staple sequences
     stapleSequence = FindStapleSequences(
