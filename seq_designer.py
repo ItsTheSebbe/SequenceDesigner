@@ -52,6 +52,7 @@ def ParseJson():
     scaffolds = np.empty(numStrands, dtype=object)
     staples = np.empty(numStrands, dtype=object)
     skip = np.empty(numStrands, dtype=object)
+    loop = np.empty(numStrands, dtype=object)
 
     emptyStrand = []
     for i in range(lengthStrands):
@@ -64,13 +65,16 @@ def ParseJson():
             scaffolds[i] = strandData[nums.index(i)]['scaf']
             staples[i] = strandData[nums.index(i)]['stap']
             skip[i] = strandData[nums.index(i)]['skip']
+            loop[i] = strandData[nums.index(i)]['loop']
+
         # if strand doesn't exist
         else:
             scaffolds[i] = emptyStrand
             staples[i] = emptyStrand
             skip[i] = 0
+            loop[i] = 0
 
-    return numStrands, lengthStrands, scaffolds, staples, fileName, skip
+    return numStrands, lengthStrands, scaffolds, staples, fileName, skip, loop
 
 
 def CreateLookUpTable(numStrands, lengthStrands):
@@ -78,8 +82,8 @@ def CreateLookUpTable(numStrands, lengthStrands):
     Returns a look up table for the scaffold in string formatm
     initialized with empty initial values = ''.
     """
-
-    lookUpScaffold = np.zeros((numStrands, lengthStrands), dtype='U1')
+    lookUpScaffold = [['' for x in range(lengthStrands)]
+                      for y in range(numStrands)]
     return lookUpScaffold
 
 
@@ -320,14 +324,13 @@ def CheckMultipleBase(startBase):
     return any(isinstance(el, list) for el in startBase)
 
 
-def FindLength(strand, startSearchBase, skip):
+def FindLength(strand, startSearchBase, skip, loop):
     """
     Returns length of sequences for the start bases provided.
     """
 
     maxRange = len(startSearchBase)
     length = [None] * len(startSearchBase)
-    lengthScaffoldsNoSkips = [None] * len(startSearchBase)
 
     # To avoid i.e. [0,50] and [[3, 82], [0, 45]] both having length 2
     if len(startSearchBase) == 2:
@@ -345,9 +348,9 @@ def FindLength(strand, startSearchBase, skip):
 
         currentBlock = strand[currentBase[0]][currentBase[1]]
         currentSkip = skip[currentBase[0]][currentBase[1]]
+        currentLoop = loop[currentBase[0]][currentBase[1]]
 
         length[i] = 0
-        lengthScaffoldsNoSkips[i] = 0
 
         # If current block is empty, return empty base
         if currentBlock == [-1, -1, -1, -1]:
@@ -355,25 +358,30 @@ def FindLength(strand, startSearchBase, skip):
 
         nextBase, nextBlock = ForwardTraverse(strand, currentBase)
 
-        length[i] = length[i] + 1
         if currentSkip == 0:
-            lengthScaffoldsNoSkips[i] = lengthScaffoldsNoSkips[i] + 1
+            length[i] = length[i] + 1
+
+        if currentLoop != 0:
+            length[i] = length[i] + currentLoop
 
         # Traverse strand until next base is [-1,-1]
         while nextBase != [-1, -1]:
             currentBlock = nextBlock
             currentBase = nextBase
             currentSkip = skip[currentBase[0]][currentBase[1]]
+            currentLoop = loop[currentBase[0]][currentBase[1]]
 
             nextBase, nextBlock = ForwardTraverse(strand, currentBase)
-            length[i] = length[i] + 1
             if currentSkip == 0:
-                lengthScaffoldsNoSkips[i] = lengthScaffoldsNoSkips[i] + 1
+                length[i] = length[i] + 1
 
-    return length, lengthScaffoldsNoSkips
+            if currentLoop != 0:
+                length[i] = length[i] + currentLoop
+
+    return length
 
 
-def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip):
+def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip, loop):
     """
     Appends base letter from inputSequence to each base in scaffold.
     Returns sequence containing bases and base letters.
@@ -384,22 +392,42 @@ def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip)
     currentBase = startBase
     currentBlock = scaffold[currentBase[0]][currentBase[1]]
     currentSkip = skip[currentBase[0]][currentBase[1]]
+    currentLoop = loop[currentBase[0]][currentBase[1]]
 
-    if currentSkip == 0:
-        currentBase.append(inputSequence[0])
+    cnt = 0
+
+    if currentSkip == 0 and currentLoop == 0:
+
+        currentBase.append(inputSequence[cnt])
         finalSequence.append(currentBase)
 
-        lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[0]
-        cnt = 1
+        lookUpScaffold[currentBase[0]][currentBase[1]] = inputSequence[cnt]
+        cnt += 1
+
+    elif currentSkip == 0 and currentLoop != 0:
+
+        loopSequence = [inputSequence[cnt]]
+
+        cnt += 1
+
+        for i in range(currentLoop):
+            loopSequence.append(inputSequence[cnt])
+            cnt += 1
+        loopSequence = ''.join(loopSequence)
+
+        currentBase.append(loopSequence)
+        finalSequence.append(currentBase)
+
+        lookUpScaffold[currentBase[0]][currentBase[1]] = loopSequence
 
     elif currentSkip == -1:
         currentBase.append('X')
         finalSequence.append(currentBase)
 
-        lookUpScaffold[currentBase[0], currentBase[1]] = 'X'
+        lookUpScaffold[currentBase[0]][currentBase[1]] = 'X'
 
     else:
-        sys.exit("Not a valid skip array in json file!")
+        sys.exit("Not a valid skip/loop array in json file!")
 
     nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
 
@@ -409,30 +437,45 @@ def FindSingleScaffold(scaffold, startBase, inputSequence, lookUpScaffold, skip)
         currentBase = nextBase
         currentBlock = nextBlock
         currentSkip = skip[currentBase[0]][currentBase[1]]
+        currentLoop = loop[currentBase[0]][currentBase[1]]
 
-        if currentSkip == 0:
+        if currentSkip == 0 and currentLoop == 0:
 
             currentBase.append(inputSequence[cnt])
             finalSequence.append(currentBase)
 
-            lookUpScaffold[currentBase[0], currentBase[1]] = inputSequence[cnt]
+            lookUpScaffold[currentBase[0]][currentBase[1]] = inputSequence[cnt]
             cnt += 1
+        elif currentSkip == 0 and currentLoop != 0:
+
+            loopSequence = [inputSequence[cnt]]
+
+            cnt += 1
+
+            for i in range(currentLoop):
+                loopSequence.append(inputSequence[cnt])
+                cnt += 1
+            loopSequence = ''.join(loopSequence)
+
+            currentBase.append(loopSequence)
+            finalSequence.append(currentBase)
+
+            lookUpScaffold[currentBase[0]][currentBase[1]] = loopSequence
 
         elif currentSkip == -1:
             currentBase.append('X')
             finalSequence.append(currentBase)
 
-            lookUpScaffold[currentBase[0], currentBase[1]] = 'X'
-
+            lookUpScaffold[currentBase[0]][currentBase[1]] = 'X'
         else:
-            sys.exit("Not a valid skip array in json file!")
+            sys.exit("Not a valid skip/loop array in json file!")
 
         nextBase, nextBlock = ForwardTraverse(scaffold, currentBase)
 
     return finalSequence
 
 
-def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip):
+def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip, loop):
     """
     Returns all scaffolds sequences, assigns the rawScaffoldSequence to the
     longest scaffold. The other scaffolds get pseudorandomly generated sequences.
@@ -440,24 +483,22 @@ def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, loo
 
     print("Generating scaffold sequences...")
 
-    lengthScaffolds, lengthScaffoldsNoSkips = FindLength(scaffolds, scaffoldStartBase, skip)
+    length = FindLength(scaffolds, scaffoldStartBase, skip, loop)
 
     # Exit if no scaffold is found
-    if lengthScaffolds == []:
+    if length == []:
         sys.exit("No scaffolds found")
 
-    maxIndex = np.argmax(lengthScaffolds)
-    maxRange = len(lengthScaffolds)
+    maxIndex = np.argmax(length)
+    maxRange = len(length)
     finalSequence = [None] * maxRange
 
-    # fix so it wrosk with skip
-
     # Exit if scaffold sequence provided is not long enough
-    if lengthScaffoldsNoSkips[maxIndex] > len(rawScaffoldSequence):
+    if length[maxIndex] > len(rawScaffoldSequence):
         sys.exit(
             "Scaffold sequence given is not long enough.\nScaffold input length: "
-            + str(len(rawScaffoldSequence)) + "\nLongest scaffold: "
-            + str(lengthScaffoldsNoSkips[maxIndex]) + "\nPlease provide a longer sequence.")
+            + str(len(rawScaffoldSequence)) + "\nLongest scaffold in json: "
+            + str(length[maxIndex]) + "\nPlease provide a longer sequence.")
 
     for i in range(maxRange):
         if CheckMultipleBase(scaffoldStartBase):
@@ -467,17 +508,37 @@ def FindScaffoldSequences(scaffolds, scaffoldStartBase, rawScaffoldSequence, loo
 
         if i == maxIndex:
             finalSequence[i] = FindSingleScaffold(
-                scaffolds, currentBase, rawScaffoldSequence, lookUpScaffold, skip)
+                scaffolds, currentBase, rawScaffoldSequence, lookUpScaffold, skip, loop)
         else:
             # Generate random sequence based on GC content, etc (from virtual_scaffold.py)
-            randomScaffoldSequence, _ = sequence_creator(lengthScaffoldsNoSkips[i])
+            randomScaffoldSequence, _ = sequence_creator(length[i])
             finalSequence[i] = FindSingleScaffold(
-                scaffolds, currentBase, randomScaffoldSequence, lookUpScaffold, skip)
+                scaffolds, currentBase, randomScaffoldSequence, lookUpScaffold, skip, loop)
 
     return finalSequence
 
 
 def Complement(inputBase):
+    """
+    Returns the complementary base of input base.
+    """
+    if len(inputBase) != 1:
+        complementBase = [None] * len(inputBase)
+
+        for i in range(len(inputBase)):
+            complementBase[i] = SingleComplement(inputBase[i])
+
+        # Invert sequence
+        complementBase = complementBase[::-1]
+        complementBase = ''.join(complementBase)
+
+    else:
+        complementBase = SingleComplement(inputBase)
+
+    return complementBase
+
+
+def SingleComplement(inputBase):
     """
     Returns the complementary base of input base.
     """
@@ -494,7 +555,7 @@ def Complement(inputBase):
     # Denotes a skip
     elif inputBase == 'X':
         return 'X'
-    
+
     else:
         sys.exit(str(inputBase) + " is not a valid base")
 
@@ -506,7 +567,7 @@ def FindStapleBase(stapleBase, lookUpScaffold):
     """
 
     # Look up base letter from look up table
-    scaffoldBaseLetter = lookUpScaffold[stapleBase[0], stapleBase[1]]
+    scaffoldBaseLetter = lookUpScaffold[stapleBase[0]][stapleBase[1]]
 
     # If no corresponding scaffolds is found, assign 'A'
     if scaffoldBaseLetter == '':
@@ -537,7 +598,7 @@ def FindStapleSequences(staples, stapleStartBases, lookUpScaffold, lookUpStaple)
         currentBase.append(baseLetter)
         finalSequence[i] = [currentBase]
 
-        lookUpStaple[currentBase[0], currentBase[1]] = baseLetter
+        lookUpStaple[currentBase[0]][currentBase[1]] = baseLetter
 
         nextBase, nextBlock = ForwardTraverse(staples, currentBase)
 
@@ -551,7 +612,7 @@ def FindStapleSequences(staples, stapleStartBases, lookUpScaffold, lookUpStaple)
             currentBase.append(baseLetter)
             finalSequence[i].append(currentBase)
 
-            lookUpStaple[currentBase[0], currentBase[1]] = baseLetter
+            lookUpStaple[currentBase[0]][currentBase[1]] = baseLetter
 
             nextBase, nextBlock = ForwardTraverse(staples, currentBase)
 
@@ -587,7 +648,7 @@ def PrintSequence(sequence, fileName, view=1):
             for j in range(len(currentSequence)):
                 if currentSequence[j][2] != 'X':
                     outputFile.write(str(currentSequence[j][2]))
-                    cnt += 1
+                    cnt += len(currentSequence[j][2])
             outputFile.write("," + str(cnt) + "\n")
     else:
         sys.exit("Not a valid print mode.")
@@ -631,7 +692,7 @@ def VerifyStaples(stapleSequence):
                       " at " + str(stapleSequence[i][0][0]) + "[" + str(stapleSequence[i][0][1]) + "]" + " has 7 or more consecutive A's at the end")
 
 
-def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName):
+def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName, loop):
     """
     Print visual representation of the sequences in cadnano style format.
     """
@@ -640,45 +701,77 @@ def PrintVisualizer(numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fil
     outputFile = open(fileName, 'w')
 
     for i in range(numStrands):
+        # Even strands
         if i % 2 == 0:
             outputFile.write("Scaffold " + "{:<5}".format(str(i)) + "|")
             for j in range(lengthStrands):
-                if lookUpScaffold[i, j] == '':
+                if lookUpScaffold[i][j] == '':
                     outputFile.write("-")
                 else:
-                    outputFile.write(lookUpScaffold[i, j])
-            outputFile.write("|\n")
+                    if loop[i][j] == 0:
+                        outputFile.write(lookUpScaffold[i][j])
+                    else:
+                        outputFile.write("{")
+                        outputFile.write(lookUpScaffold[i][j])
+                        outputFile.write("}")
+                        
 
+            outputFile.write("|\n")
             outputFile.write("Staple " + "{:<7}".format(str(i)) + "|")
 
             for j in range(lengthStrands):
-                if lookUpStaple[i, j] == '':
+                if lookUpStaple[i][j] == '':
                     outputFile.write("-")
                 else:
-                    outputFile.write(lookUpStaple[i, j])
+                    # Check for loop, invert sequence if found
+                    if loop[i][j] == 0:
+                        outputFile.write(lookUpStaple[i][j])
+                    else:
+                        outputFile.write("{")
+                        reverseLoop = lookUpStaple[i][j][::-1]
+                        outputFile.write(reverseLoop)
+                        outputFile.write("}")
+
+
             outputFile.write("|\n\n")
+        # Odd strands
         else:
             outputFile.write("Staple " + "{:<7}".format(str(i)) + "|")
 
             for j in range(lengthStrands):
-                if lookUpStaple[i, j] == '':
+                if lookUpStaple[i][j] == '':
                     outputFile.write("-")
                 else:
-                    outputFile.write(lookUpStaple[i, j])
+                    if loop[i][j] == 0:
+                        outputFile.write(lookUpStaple[i][j])
+                    else:
+                        outputFile.write("{")
+                        outputFile.write(lookUpStaple[i][j])
+                        outputFile.write("}")
+
             outputFile.write("|\n")
             outputFile.write("Scaffold " + "{:<5}".format(str(i)) + "|")
 
             for j in range(lengthStrands):
-                if lookUpScaffold[i, j] == '':
+                if lookUpScaffold[i][j] == '':
                     outputFile.write("-")
                 else:
-                    outputFile.write(lookUpScaffold[i, j])
+                    # Check for loop, invert sequence if found
+                    if loop[i][j] == 0:
+                        outputFile.write(lookUpScaffold[i][j])
+
+                    else:
+                        outputFile.write("{")
+                        reverseLoop = lookUpScaffold[i][j][::-1]
+                        outputFile.write(reverseLoop)
+                        outputFile.write("}")
+
             outputFile.write("|\n\n")
 
     outputFile.close()
 
 
-def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName):
+def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, lookUpScaffold, lookUpStaple, fileName, loop):
     """
     Output files to folder with same name of input json file.
     """
@@ -693,7 +786,7 @@ def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, loo
         directoryName, scaffoldsFileName))
     PrintSequence(stapleSequence, os.path.join(directoryName, staplesFileName))
     PrintVisualizer(numStrands, lengthStrands, lookUpScaffold,
-                    lookUpStaple, os.path.join(directoryName, visualizerFileName))
+                    lookUpStaple, os.path.join(directoryName, visualizerFileName), loop)
 
 
 def main():
@@ -705,7 +798,7 @@ def main():
     random.seed(0)
 
     # Load json data
-    numStrands, lengthStrands, scaffolds, staples, fileName, skip = ParseJson()
+    numStrands, lengthStrands, scaffolds, staples, fileName, skip, loop = ParseJson()
 
     # Initialize look up table for scaffold
     lookUpScaffold = CreateLookUpTable(numStrands, lengthStrands)
@@ -724,7 +817,7 @@ def main():
 
     # Returns scaffolds sequence
     scaffoldSequence = FindScaffoldSequences(
-        scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip)
+        scaffolds, scaffoldStartBase, rawScaffoldSequence, lookUpScaffold, skip, loop)
 
     # Returns staple sequences
     stapleSequence = FindStapleSequences(
@@ -735,7 +828,7 @@ def main():
 
     # IO
     OutputFiles(scaffoldSequence, stapleSequence, numStrands,
-                lengthStrands, lookUpScaffold, lookUpStaple, fileName)
+                lengthStrands, lookUpScaffold, lookUpStaple, fileName, loop)
 
     print("Done!")
 

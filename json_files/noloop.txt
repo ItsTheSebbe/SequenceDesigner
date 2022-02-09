@@ -1,0 +1,3 @@
+Start,End,Sequence,Length,Color
+1[2],1[11],TAGTAGTAGC,10,#03b6a2
+0[11],0[2],ATTCTACTAA,10,#aaaa00
