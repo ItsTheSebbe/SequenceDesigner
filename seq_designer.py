@@ -770,6 +770,9 @@ def OutputFiles(scaffoldSequence, stapleSequence, numStrands, lengthStrands, loo
     staplesFileName = "staples_" + fileName + ".txt"
     visualizerFileName = "visualized_sequence_" + fileName + ".txt"
 
+    # Sort scaffolds from longest to shortest for printing
+    scaffoldSequence.sort(key = len, reverse=True)
+
     os.makedirs(directoryName, exist_ok=True)
 
     # Print scaffold file
